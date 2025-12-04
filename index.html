@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>岡山四日輕旅</title>
+    <!-- PWA / iOS 全螢幕 (去除網址列) Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#5A7F7A">
+    <!-- Apple Touch Icon (iOS 加入主畫面圖示) -->
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/5A7F7A/FFFFFF?text=JP">
+    <!-- PWA Manifest Link (將由 JS 動態生成) -->
+    <link rel="manifest" id="manifest-link" href=""> 
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome CDN for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts for Japanese/Taiwanese Aesthetic (Noto Sans TC) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 日系簡約風格設定 */
+        :root {
+            --color-primary: #5A7F7A; /* 柔和綠 */
+            --color-secondary: #F0EDE5; /* 淺米白 */
+            --color-accent: #E57373; /* 柔和紅 (用於強調時間) */
+            --color-text: #2D3748; /* 深灰 */
+        }
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--color-secondary);
+            color: var(--color-text);
+            padding-bottom: 72px; /* 留給底部導航列的空間 */
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem; /* 圓角 */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06); /* 柔和陰影 */
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+        }
+        .nav-active {
+            color: var(--color-primary);
+            font-weight: 500;
+        }
+        .tab-content {
+            display: none;
+            padding: 1rem;
+        }
+        .highlight-time {
+            color: var(--color-accent);
+            font-weight: 700;
+        }
+        .btn-primary {
+            background-color: var(--color-primary);
+            color: white;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #4A6E69;
+        }
+        .timeline-item {
+            border-left: 2px solid var(--color-primary);
+            padding-left: 1.5rem;
+            margin-left: 0.5rem;
+            position: relative;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: -8px;
+            top: 0.25rem;
+            width: 14px;
+            height: 14px;
+            background-color: white;
+            border: 2px solid var(--color-primary);
+            border-radius: 9999px;
+        }
+        .weather-banner {
+            background-image: linear-gradient(to right, #B2EBF2, #E0F7FA);
+            color: #00838F;
+        }
+        .map-icon {
+            color: var(--color-primary);
+        }
+        /* Custom styles for the calculator */
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+        }
+        .calculator-btn {
+            background-color: #F8F8F8;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: var(--color-text);
+            transition: background-color 0.1s;
+        }
+        .calculator-btn:active {
+            background-color: #E0E0E0;
+        }
+        .calculator-op {
+            background-color: #E0F7FA;
+            color: #00838F;
+        }
+        .calculator-eq {
+            background-color: var(--color-primary);
+            color: white;
+            grid-column: span 2;
+        }
+        /* Style for the embedded map iframe */
+        #guide-map {
+            border-radius: 1rem;
+            width: 100%;
+            height: 300px;
+        }
+
+        /* --- PWA/Splash Screen Styles --- */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--color-secondary); /* 淺米白背景 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+        }
+        .app-logo {
+            font-size: 4rem;
+            color: var(--color-primary);
+            animation: bounce-in 1s ease-out forwards;
+        }
+        .app-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--color-text);
+            margin-top: 1rem;
+            opacity: 0;
+            animation: fade-in 1s ease-out 0.5s forwards;
+        }
+        @keyframes bounce-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .hidden-splash {
+            pointer-events: none;
+            opacity: 0 !important;
+        }
+        
+        /* A2HS 提示欄 */
+        #a2hs-prompt {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            z-index: 99; /* 高於 Header */
+            display: none; /* 預設隱藏，由 JS 控制顯示 */
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- 1. Splash Screen (App 啟動畫面) -->
+    <div id="splash-screen">
+        <div class="app-logo">
+            <i class="fas fa-route"></i>
+        </div>
+        <div class="app-title">岡山輕旅啟動中...</div>
+    </div>
+    
+    <!-- 2. A2HS Prompt (非 App 模式下顯示的加入主畫面提示) -->
+    <div id="a2hs-prompt" class="flex justify-between items-center text-sm">
+        <p class="flex-grow text-center"><i class="fab fa-apple mr-2"></i> 點擊「分享」後選「加入主畫面」，獲得完整 App 體驗！</p>
+        <button onclick="document.getElementById('a2hs-prompt').style.display='none';" class="text-gray-400 hover:text-white ml-3">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <!-- Header & Title -->
+    <header class="p-4 bg-white shadow-sm sticky top-0 z-10">
+        <h1 class="text-xl font-bold text-center text-gray-800">岡山四日輕旅行</h1>
+        <p class="text-sm text-center text-gray-500 mt-1">Single File 旅遊小幫手</p>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="app-content">
+
+        <!-- 1. PLAN (行程表) Tab Content -->
+        <div id="tab-plan" class="tab-content block">
+            <h2 class="text-2xl font-semibold mb-4 border-b pb-2">✈️ 行程總覽 (PLAN)</h2>
+            
+            <!-- Day Navigation 移至上方 -->
+            <div class="flex justify-center mb-4 space-x-2">
+                <button onclick="changeDay(1)" class="day-btn btn-primary bg-opacity-80">Day 1</button>
+                <button onclick="changeDay(2)" class="day-btn btn-primary bg-opacity-50">Day 2</button>
+                <button onclick="changeDay(3)" class="day-btn btn-primary bg-opacity-50">Day 3</button>
+                <button onclick="changeDay(4)" class="day-btn btn-primary bg-opacity-50">Day 4</button>
+            </div>
+            
+            <div id="plan-itinerary">
+                <!-- Daily Content will be generated here by JS -->
+            </div>
+        </div>
+
+        <!-- 2. GUIDE (深度導覽) Tab Content -->
+        <div id="tab-guide" class="tab-content">
+            <h2 class="text-2xl font-semibold mb-4 border-b pb-2">⛩️ 深度導覽 (GUIDE)</h2>
+
+            <!-- 地圖區塊 -->
+            <div class="card p-4 mb-4">
+                <h3 class="text-xl font-medium mb-3">📍 旅程地圖概覽</h3>
+                <!-- Google Maps Embed for Okayama/Kagawa area -->
+                <iframe id="guide-map"
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d198884.2346740683!2d133.6841267425121!3d34.46824490704043!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x35511af41b802677%3A0x3500d4d7a72d326!2z5b6D5b6e5bmV55yM5b6D5b6e6aeF!5e0!3m2!1szh-TW!2stw!4v1701723652870!5m2!1szh-TW!2stw"
+                    allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
+            </div>
+
+            <!-- 深度導覽內容區塊 (動態生成所有景點/餐廳/交通) -->
+            <div id="guide-content" class="space-y-4">
+                <!-- Guide content will be dynamically generated by JS -->
+            </div>
+        </div>
+
+        <!-- 3. WALLET (記帳與匯率) Tab Content -->
+        <div id="tab-wallet" class="tab-content">
+            <h2 class="text-2xl font-semibold mb-4 border-b pb-2">💰 記帳與匯率 (WALLET)</h2>
+
+            <!-- 匯率換算器 (點擊開啟/收合) -->
+            <div class="card p-4 mb-4">
+                <div class="flex justify-between items-center cursor-pointer" onclick="toggleCalculator()">
+                    <h3 class="text-xl font-medium">匯率換算器</h3>
+                    <i id="calculator-toggle-icon" class="fas fa-chevron-up text-lg text-gray-500"></i>
+                </div>
+                
+                <!-- Collapsible Calculator Body -->
+                <div id="calculator-body" class="mt-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <label for="exchange-rate" class="text-sm font-medium">匯率 (JPY 1 = TWD)</label>
+                        <input type="number" id="exchange-rate" value="0.22" step="0.001" class="w-24 p-2 border rounded-lg text-right focus:ring-var(--color-primary) focus:border-var(--color-primary)">
+                    </div>
+
+                    <div class="bg-gray-100 p-3 rounded-xl mb-4">
+                        <div id="calculator-display" class="text-right text-3xl font-bold mb-2 h-10 overflow-hidden">0</div>
+                        <div id="calculator-twd-result" class="text-right text-base text-gray-600">約 NT$ 0.00</div>
+                    </div>
+                    
+                    <div class="calculator-grid">
+                        <button class="calculator-btn" onclick="appendToExpression('1')">1</button>
+                        <button class="calculator-btn" onclick="appendToExpression('2')">2</button>
+                        <button class="calculator-btn" onclick="appendToExpression('3')">3</button>
+                        <button class="calculator-btn calculator-op" onclick="appendToExpression('+')"><i class="fas fa-plus"></i></button>
+                        
+                        <button class="calculator-btn" onclick="appendToExpression('4')">4</button>
+                        <button class="calculator-btn" onclick="appendToExpression('5')">5</button>
+                        <button class="calculator-btn" onclick="appendToExpression('6')">6</button>
+                        <button class="calculator-btn calculator-op" onclick="appendToExpression('-')"><i class="fas fa-minus"></i></button>
+
+                        <button class="calculator-btn" onclick="appendToExpression('7')">7</button>
+                        <button class="calculator-btn" onclick="appendToExpression('8')">8</button>
+                        <button class="calculator-btn" onclick="appendToExpression('9')">9</button>
+                        <button class="calculator-btn calculator-op" onclick="appendToExpression('*')"><i class="fas fa-times"></i></button>
+
+                        <button class="calculator-btn" onclick="appendToExpression('C')">C</button>
+                        <button class="calculator-btn" onclick="appendToExpression('0')">0</button>
+                        <button class="calculator-btn calculator-op" onclick="appendToExpression('.')">.</button>
+                        <button class="calculator-btn calculator-op" onclick="appendToExpression('/')"><i class="fas fa-divide"></i></button>
+                        
+                        <button class="calculator-btn calculator-eq" onclick="calculateResult()">=</button>
+                        <button class="calculator-btn calculator-eq" onclick="appendToExpression('(')">(</button>
+                        <button class="calculator-btn calculator-eq" onclick="appendToExpression(')')">)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 記帳新增區 -->
+            <div class="card p-4 mb-4">
+                <h3 class="text-xl font-medium mb-3 border-b pb-2">新增消費紀錄</h3>
+                <form id="expense-form" class="space-y-3">
+                    <div>
+                        <label for="item-name" class="text-sm font-medium">品項</label>
+                        <input type="text" id="item-name" required class="w-full p-2 border rounded-lg focus:ring-var(--color-primary) focus:border-var(--color-primary)">
+                    </div>
+                    <div>
+                        <label for="item-jpy" class="text-sm font-medium">日幣金額 (¥)</label>
+                        <input type="number" id="item-jpy" required min="1" class="w-full p-2 border rounded-lg focus:ring-var(--color-primary) focus:border-var(--color-primary)">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">支付方式</label>
+                        <div class="flex space-x-4 mt-1">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="payment-type" value="Cash" checked class="form-radio text-var(--color-primary)">
+                                <span class="ml-2">現金</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="payment-type" value="Credit" class="form-radio text-var(--color-primary)">
+                                <span class="ml-2">信用卡</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">收據照片 (選填)</label>
+                        <input type="file" id="item-photo" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-var(--color-primary) file:text-white hover:file:bg-var(--color-primary)">
+                        <input type="hidden" id="photo-base64">
+                    </div>
+                    <button type="submit" class="btn-primary w-full mt-4"><i class="fas fa-plus mr-2"></i> 新增紀錄</button>
+                </form>
+            </div>
+
+            <!-- 記帳列表 -->
+            <h3 class="text-xl font-medium mb-3 border-b pb-2">歷史紀錄</h3>
+            <div id="expense-list" class="space-y-3">
+                <!-- Records will be displayed here -->
+            </div>
+        </div>
+
+        <!-- 4. LISTS (清單) Tab Content -->
+        <div id="tab-lists" class="tab-content">
+            <h2 class="text-2xl font-semibold mb-4 border-b pb-2">📝 清單與備忘 (LISTS)</h2>
+
+            <!-- 行前準備 Checklist -->
+            <div class="card p-4 mb-4">
+                <h3 class="text-xl font-medium mb-3 border-b pb-2 text-green-700"><i class="fas fa-clipboard-check mr-2"></i> 行前準備 Checklist</h3>
+                
+                <!-- 新增項目功能 -->
+                <div class="flex space-x-2 mb-4">
+                    <input type="text" id="new-checklist-item" placeholder="新增自訂清單項目..." 
+                        class="flex-grow p-2 border rounded-lg focus:ring-var(--color-primary) focus:border-var(--color-primary)"
+                        onkeydown="if(event.key === 'Enter') { event.preventDefault(); addChecklistItem(); }">
+                    <button onclick="addChecklistItem()" class="btn-primary flex-shrink-0">
+                        <i class="fas fa-plus"></i> 新增
+                    </button>
+                </div>
+
+                <div id="checklist-items" class="space-y-3">
+                    <!-- Checklist items here -->
+                </div>
+            </div>
+
+            <!-- 個人備忘錄 -->
+            <div class="card p-4">
+                <h3 class="text-xl font-medium mb-3 border-b pb-2 text-indigo-700"><i class="fas fa-lightbulb mr-2"></i> 個人備忘錄</h3>
+                <textarea id="memo-text" rows="6" class="w-full p-3 border rounded-lg focus:ring-var(--color-primary) focus:border-var(--color-primary) resize-none" placeholder="輸入您的備忘錄或網址..."></textarea>
+                <div id="memo-output" class="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <p class="text-sm text-gray-500 mb-2">連結預覽 (網址將自動轉換為按鈕)</p>
+                    <div id="memo-links" class="space-y-2">
+                        <!-- Converted links here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. INFO (資訊) Tab Content -->
+        <div id="tab-info" class="tab-content">
+            <h2 class="text-2xl font-semibold mb-4 border-b pb-2">ℹ️ 旅遊資訊 (INFO)</h2>
+
+            <!-- 航班與住宿 -->
+            <div class="card p-4 mb-4">
+                <h3 class="text-xl font-medium mb-3 border-b pb-2">航班與住宿資訊</h3>
+                <p class="text-sm mb-2"><i class="fas fa-plane mr-2 text-blue-500"></i> **去程**: 虎航 IT214 | 11:10 台北 → 14:35 岡山</p>
+                <p class="text-sm mb-4"><i class="fas fa-plane-arrival mr-2 text-blue-500"></i> **回程**: 虎航 IT215 | 15:25 岡山 → 17:30 台北</p>
+                
+                <p class="text-sm font-medium text-gray-700 mb-1">🏠 住宿地點</p>
+                <p class="text-sm mb-2 break-words">日本〒700-0026 Okayama, Kita Ward, Hokancho, 1 Chome−2−3 せかんどゆーす西口 505号室</p>
+                <a href="https://maps.app.goo.gl/3QW7v5c3X2yFwA648" target="_blank" class="text-xs text-blue-500 underline"><i class="fas fa-map-marker-alt mr-1"></i> 開啟 Google Maps</a>
+            </div>
+
+            <!-- 租車資訊 -->
+            <div class="card p-4 mb-4">
+                <h3 class="text-xl font-medium mb-3 border-b pb-2">租車資訊</h3>
+                <p class="text-sm mb-1"><i class="fas fa-car mr-2 text-yellow-600"></i> **租車公司**: Budget Car Rental バジェット レンタカー 岡山駅前西口店</p>
+                <p class="text-sm mb-1">**取車**: 01/18（六）09:00</p>
+                <p class="text-sm mb-1">**還車**: 01/19（日）08:30</p>
+                <a href="https://maps.app.goo.gl/m3P3Qz9E8WqA4K2eA" target="_blank" class="text-xs text-blue-500 underline"><i class="fas fa-map-marker-alt mr-1"></i> 取/還車地點地圖</a>
+            </div>
+
+            <!-- 天氣與緊急連絡 -->
+            <div class="card p-4 mb-4">
+                <h3 class="text-xl font-medium mb-3 border-b pb-2">當地資訊與緊急連絡</h3>
+                
+                <p class="text-sm font-medium text-gray-700 mb-1">☀️ 當地天氣</p>
+                <a href="https://www.jma.go.jp/jma/index.html" target="_blank" class="text-sm text-blue-500 underline mb-3 block"><i class="fas fa-cloud-sun mr-1"></i> 日本氣象廳（JMA）官方連結</a>
+
+                <p class="text-sm font-medium text-gray-700 mb-1 mt-3">🚨 緊急連絡電話</p>
+                <p class="text-sm">**警察**: 110 (撥打)</p>
+                <p class="text-sm">**救護車/消防**: 119 (撥打)</p>
+                <p class="text-sm text-red-600">**駐日辦事處**: (+81) 3-3280-7811 (東京) 或 (+81) 86-224-5477 (大阪分支 - 僅供參考)</p>
+            </div>
+
+            <!-- 旅遊禁忌與規範 -->
+            <div class="card p-4">
+                <h3 class="text-xl font-medium mb-3 border-b pb-2">⚠️ 旅遊注意事項</h3>
+                <ul class="list-disc pl-5 text-sm space-y-1">
+                    <li>**隨身液體**：單一容器不得超過 100ml，所有容器需裝入 1 公升的透明夾鏈袋內。</li>
+                    <li>**虎航手提行李**：每人限 2 件，總重不得超過 10 公斤。</li>
+                    <li>**海關違禁品**：嚴禁攜帶肉類製品、未經檢疫的水果、高劑量電子菸油等入境。</li>
+                    <li>**禮儀**：在日本搭乘大眾運輸請勿大聲講電話。</li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- Fixed Bottom Navigation Bar (底部導航列) -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-xl z-20">
+        <div class="flex justify-around items-center h-16 max-w-lg mx-auto">
+            <button id="nav-plan" class="nav-btn flex flex-col items-center justify-center p-2 nav-active" onclick="showTab('plan')">
+                <i class="fas fa-calendar-alt text-lg"></i>
+                <span class="text-xs mt-1">行程表</span>
+            </button>
+            <button id="nav-guide" class="nav-btn flex flex-col items-center justify-center p-2" onclick="showTab('guide')">
+                <i class="fas fa-compass text-lg"></i>
+                <span class="text-xs mt-1">導覽</span>
+            </button>
+            <button id="nav-wallet" class="nav-btn flex flex-col items-center justify-center p-2" onclick="showTab('wallet')">
+                <i class="fas fa-wallet text-lg"></i>
+                <span class="text-xs mt-1">記帳</span>
+            </button>
+            <button id="nav-lists" class="nav-btn flex flex-col items-center justify-center p-2" onclick="showTab('lists')">
+                <i class="fas fa-list-ul text-lg"></i>
+                <span class="text-xs mt-1">清單</span>
+            </button>
+            <button id="nav-info" class="nav-btn flex flex-col items-center justify-center p-2" onclick="showTab('info')">
+                <i class="fas fa-info-circle text-lg"></i>
+                <span class="text-xs mt-1">資訊</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // ====================================================================
+        // GLOBAL DATA & INITIALIZATION
+        // ====================================================================
+
+        const STORAGE_KEY_EXPENSES = 'okayamaTripExpenses';
+        const STORAGE_KEY_CHECKLIST = 'okayamaTripChecklist'; // 存儲 checklistItems
+        const STORAGE_KEY_MEMO = 'okayamaTripMemo';
+        const STORAGE_KEY_RATE = 'okayamaTripExchangeRate';
+        
+        let expenses = [];
+        let checklistItems = []; // 新增：用於儲存所有清單項目的陣列
+        let currentDay = 1;
+        let exchangeRate = parseFloat(localStorage.getItem(STORAGE_KEY_RATE)) || 0.22;
+        let isCalculatorOpen = true; // 初始狀態為展開
+        
+        // 固定的初始清單項目 (用於第一次載入時建立資料結構)
+        const INITIAL_CHECKLIST_STRINGS = [
+            '護照', '網卡', '充電線', '錢包', '行動電源'
+        ];
+
+        // 深度導覽的資料集合
+        const COMPREHENSIVE_GUIDE = [
+            {
+                title: '✈️ 岡山機場 (OKJ)',
+                category: '交通',
+                mapLink: 'https://maps.app.goo.gl/YfL4E5bQ9d2L6JqG9',
+                icon: 'fas fa-plane-departure',
+                description: '岡山縣的主要國際門戶，位於岡山市區北側，主要服務國內線與部分國際航線（如台北虎航）。機場有巴士直達岡山車站，交通便利。',
+                tips: '機場巴士車程約 30-40 分鐘，請準備好零錢或使用交通卡。'
+            },
+            {
+                title: '🏠 せかんどゆーす西口 505號室 (住宿)',
+                category: '住宿',
+                mapLink: 'https://maps.app.goo.gl/3QW7v5c3X2yFwA648',
+                icon: 'fas fa-home',
+                description: '靠近岡山車站西口附近的舒適住宿公寓。地點方便，適合輕旅行者作為四日遊的基地。',
+                tips: '距離西口很近，步行即可到達車站，便於搭乘新幹線或地方列車。Check-in時間需與屋主確認。'
+            },
+            {
+                title: '🏯 岡山城 & 岡山後樂園',
+                category: '景點',
+                mapLink: 'https://maps.app.goo.gl/wJ137Wf7q5cE2JpQ6',
+                icon: 'fas fa-chess-rook',
+                description: '後樂園是日本三大名園之一，以池泉迴遊式設計聞名，並以岡山城為借景。岡山城因黑色外觀，又名「烏城」。兩者僅一橋之隔，是岡山的代表性歷史景點。',
+                tips: '建議下午參觀後樂園，接著在傍晚時分觀賞岡山城點燈後的夜景。'
+            },
+            {
+                title: '🛍️ 永旺夢樂城（AEON Mall）',
+                category: '購物',
+                mapLink: 'https://maps.app.goo.gl/qL3Z7R3G6WzH5Yw59',
+                icon: 'fas fa-shopping-bag',
+                description: '位於岡山車站前的大型綜合購物中心，集結了時尚、美食、影城等多功能設施。是購買伴手禮和用餐的好去處。',
+                tips: '地下樓層有超市，方便購買宵夜和當地特色食品。'
+            },
+            {
+                title: '🛶 倉敷美觀地區',
+                category: '景點',
+                mapLink: 'https://maps.app.goo.gl/bM7R3tYQ1M9k4K2u5',
+                icon: 'fas fa-water',
+                description: '保留江戶時代風貌的白壁宅邸街道，柳樹沿河川垂蔭，充滿詩意。可以體驗搭乘小船或參觀大原美術館。',
+                tips: '必吃「有鄰庵」的幸福布丁、「倉敷桃子」的季節甜點。倉敷也是日本牛仔褲的發源地。'
+            },
+            {
+                title: '⛩️ 吉備津神社',
+                category: '景點',
+                mapLink: 'https://maps.app.goo.gl/wJ137Wf7q5cE2JpQ6',
+                icon: 'fas fa-torii-gate',
+                description: '傳說是桃太郎傳說的發源地。以獨特的「吉備津造」建築風格本殿和長達 400 公尺的迴廊聞名。',
+                tips: '參拜完主殿後，一定要沿著壯觀的長廊走一圈，感受歷史的沉靜。'
+            },
+            {
+                title: '🍴 Gaho 雅芳（がほう）壽喜燒',
+                category: '美食',
+                mapLink: 'https://maps.app.goo.gl/Qc2R8T3Y1V6G8JpQ6',
+                icon: 'fas fa-utensils',
+                description: '岡山市區內受歡迎的壽喜燒或涮涮鍋專門店，提供高品質的肉品和優雅的用餐環境。',
+                tips: '建議提前透過 Tabelog 或其他方式訂位，特別是晚餐時段。餐廳提供中文菜單服務。'
+            },
+            {
+                title: '🥯 STAND1-1 貝果',
+                category: '美食',
+                mapLink: 'https://maps.app.goo.gl/u5K8y9e5Zq4hM1t2A',
+                icon: 'fas fa-coffee',
+                description: '一家風格獨特的貝果店，提供多種口味的貝果和咖啡，適合當作旅途開始前的活力早餐。',
+                tips: '靠近路面電車站，可以外帶當作前往下一個景點的路上餐點。'
+            },
+            {
+                title: '🚗 Budget Car Rental 岡山駅前西口店',
+                category: '交通',
+                mapLink: 'https://maps.app.goo.gl/m3P3Qz9E8WqA4K2eA',
+                icon: 'fas fa-car',
+                description: '位於岡山車站西口，方便旅客租車前往四國香川或瀨戶內海地區。',
+                tips: '取車時請務必檢查車輛狀況，並確認導航系統操作方式。歸還時間需嚴格遵守。'
+            },
+            {
+                title: '🌅 鷲羽山展望台',
+                category: '景點',
+                mapLink: 'https://maps.app.goo.gl/yJ6M3P5h4L8k9T1u8',
+                icon: 'fas fa-mountain',
+                description: '最佳觀賞瀨戶大橋的制高點。天氣晴朗時，可以清楚看到瀨戶內海的島嶼和跨海大橋的宏偉。',
+                tips: '是觀賞日出和日落的熱門地點，也是重要的自然公園。'
+            },
+            {
+                title: '🧗 金刀比羅宮',
+                category: '景點',
+                mapLink: 'https://maps.app.goo.gl/9Qd4w3j7mB4k2Z1j9',
+                icon: 'fas fa-hiking',
+                description: '位於四國香川縣的知名神社，以「一生一定要去一次」聞名。參拜路徑極長，本宮需爬 785 級石階。',
+                tips: '參拜前請穿著舒適的鞋子，體力不佳者可利用表參道上的轎子服務。表參道上的烏龍麵也是必嚐美食。'
+            },
+            {
+                title: '🐠 四國水族館',
+                category: '景點',
+                mapLink: 'https://maps.app.goo.gl/Rk4W7Q2m8L5h3X1e9',
+                icon: 'fas fa-fish',
+                description: '香川縣最新的大型水族館，以「四國水景」為主題，展示瀨戶內海及太平洋的豐富海洋生物。',
+                tips: '館內設計現代化，且面向瀨戶內海，景觀極佳，是親水的好地方。'
+            }
+        ];
+
+        // 旅遊行程資料 (保持不變)
+        const ITINERARY = {
+            1: {
+                date: '01/16（四）',
+                title: '抵達岡山與市區漫步',
+                events: [
+                    { time: '14:35', desc: '抵達岡山機場', highlight: true, detail: 'IT214 航班。', map: 'https://maps.app.goo.gl/YfL4E5bQ9d2L6JqG9' },
+                    { time: '14:45', desc: '接駁巴士到住宿飯店', detail: '從機場搭乘巴士前往岡山駅。', map: null },
+                    { time: '15:30', desc: '抵達飯店', detail: 'せかんどゆーす西口 505號室，放行李並Check-in。', map: 'https://maps.app.goo.gl/3QW7v5c3X2yFwA648' },
+                    { time: '16:00', desc: '岡山後樂園', detail: '快速逛主要景點。', map: 'https://maps.app.goo.gl/wJ137Wf7q5cE2JpQ6' },
+                    { time: '17:30', desc: '岡山城 外圍拍照', detail: '烏城黑色外觀。', map: 'https://maps.app.goo.gl/JqFf7R6u9uXk9M2u8' },
+                    { time: '18:30', desc: '晚餐：Gaho 雅芳（がほう）壽喜燒', detail: '提前訂位。', map: 'https://maps.app.goo.gl/Qc2R8T3Y1V6G8JpQ6', link: 'https://tabelog.com/okayama/A3301/A330101/33015482/' },
+                    { time: '19:30', desc: '永旺夢樂城（AEON Mall）逛街', detail: '岡山駅前的大型購物中心。', map: 'https://maps.app.goo.gl/qL3Z7R3G6WzH5Yw59' },
+                    { time: '21:00', desc: '返回住宿', highlight: false, detail: '步行或搭乘路面電車。', map: 'https://maps.app.goo.gl/3QW7v5c3X2yFwA648' },
+                ]
+            },
+            2: {
+                date: '01/17（五）',
+                title: '倉敷 + 吉備津神社',
+                events: [
+                    { time: '08:00', desc: '起床 → 早餐', highlight: true, detail: '飯店周邊或便利商店。' },
+                    { time: '08:20', desc: '出門', detail: '前往倉敷。', map: null },
+                    { time: '09:30', desc: '倉敷散策', detail: '小船／河道拍照、阿智神社爬山、Cafe Miyake / 倉敷桃子甜點、Denim Street / 有鄰庵。', map: 'https://maps.app.goo.gl/bM7R3tYQ1M9k4K2u5', link: 'https://tabelog.com/okayama/A3302/A330201/33000547/' },
+                    { time: '13:00', desc: '午餐：Kappa 豬排 (時間允許)', detail: '若時間允許，在倉敷解決。', map: 'https://maps.app.goo.gl/7g8K1R4B3uXk9M2u8', link: 'https://tabelog.com/okayama/A3302/A330201/33000547/' },
+                    { time: '14:00', desc: '吉備津神社', detail: '前往桃太郎傳說的發源地，長廊很壯觀。', map: 'https://maps.app.goo.gl/wJ137Wf7q5cE2JpQ6' },
+                    { time: '17:00', desc: '岡山市區晚餐', detail: '返回岡山市區覓食。', map: null },
+                    { time: '19:00', desc: '返回住宿', highlight: false, detail: '好好休息。', map: 'https://maps.app.goo.gl/3QW7v5c3X2yFwA648' },
+                ]
+            },
+            3: {
+                date: '01/18（六）',
+                title: '四國自駕：金刀比羅宮＋水族館',
+                events: [
+                    { time: '07:30', desc: '起床', highlight: false, detail: '準備出發。' },
+                    { time: '08:00', desc: '早餐：STAND1-1 貝果', detail: '搭乘路面電車前往。', map: 'https://maps.app.goo.gl/u5K8y9e5Zq4hM1t2A', link: 'https://tabelog.com/okayama/A3301/A330101/33019056/' },
+                    { time: '08:40', desc: '走路前往 Budget Car Rental 岡山駅前西口店', detail: '準備取車。', map: 'https://maps.app.goo.gl/m3P3Qz9E8WqA4K2eA' },
+                    { time: '09:00', desc: '租車出發', highlight: true, detail: '準時取車，開始自駕行程！', map: 'https://maps.app.goo.gl/m3P3Qz9E8WqA4K2eA' },
+                    { time: '09:40', desc: '鷲羽山展望台拍照', detail: '遠眺瀨戶大橋。', map: 'https://maps.app.goo.gl/yJ6M3P5h4L8k9T1u8' },
+                    { time: '10:40', desc: '金刀比羅宮 + 表參道散策', detail: '挑戰 785 階！', map: 'https://maps.app.goo.gl/9Qd4w3j7mB4k2Z1j9' },
+                    { time: '14:40', desc: '前往四國水族館', detail: '車程約 30 分鐘。', map: 'https://maps.app.goo.gl/Rk4W7Q2m8L5h3X1e9' },
+                    { time: '15:10', desc: '四國水族館', detail: '欣賞瀨戶內海景觀與水生動物。', map: 'https://maps.app.goo.gl/Rk4W7Q2m8L5h3X1e9' },
+                    { time: '18:20', desc: '回岡山 → 岡山市區晚餐', highlight: false, detail: '回程請注意路況。', map: null },
+                    { time: '20:00', desc: '返回住宿', detail: '將車停妥。', map: 'https://maps.app.goo.gl/3QW7v5c3X2yFwA648' },
+                ]
+            },
+            4: {
+                date: '01/19（日）',
+                title: '岡山市區自由 + 回程',
+                events: [
+                    { time: '07:30', desc: '起床', highlight: false, detail: '整理行李。' },
+                    { time: '08:30', desc: '租車還車', highlight: true, detail: 'Budget Car Rental 岡山駅前西口店，準時歸還。', map: 'https://maps.app.goo.gl/m3P3Qz9E8WqA4K2eA' },
+                    { time: '09:00', desc: '上午自由活動', detail: '早餐 → 整理行李 → 住宿周邊自由活動，購買伴手禮。', map: null },
+                    { time: '12:00', desc: '搭接駁巴士前往岡山機場', highlight: true, detail: '在岡山駅搭乘。', map: 'https://maps.app.goo.gl/YfL4E5bQ9d2L6JqG9' },
+                    { time: '15:25', desc: '出發回台', highlight: true, detail: '虎航 IT215 登機時間，17:30 抵達台北。', map: 'https://maps.app.goo.gl/YfL4E5bQ9d2L6JqG9' },
+                ]
+            }
+        };
+
+
+        // ====================================================================
+        // UTILITY FUNCTIONS
+        // ====================================================================
+
+        function saveToLocalStorage(key, data) {
+            localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        function loadFromLocalStorage(key, defaultValue) {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : defaultValue;
+        }
+
+        // ====================================================================
+        // NAVIGATION & TAB MANAGEMENT
+        // ====================================================================
+
+        function showTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+            // Remove active class from all nav buttons
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('nav-active'));
+            
+            // Show the selected tab content
+            const targetTab = document.getElementById(`tab-${tabId}`);
+            if (targetTab) {
+                targetTab.style.display = 'block';
+            }
+            // Add active class to the selected nav button
+            const targetNav = document.getElementById(`nav-${tabId}`);
+            if (targetNav) {
+                targetNav.classList.add('nav-active');
+            }
+
+            // Specific refresh actions
+            if (tabId === 'plan') {
+                renderItinerary(currentDay);
+            } else if (tabId === 'guide') {
+                renderGuideContent(); // 呼叫新的導覽渲染函數
+            } else if (tabId === 'wallet') {
+                renderExpenseList();
+                document.getElementById('exchange-rate').value = exchangeRate.toFixed(3);
+                // 確保計算器在切換頁面後保持上次的開合狀態
+                const body = document.getElementById('calculator-body');
+                const icon = document.getElementById('calculator-toggle-icon');
+                if (isCalculatorOpen) {
+                    body.style.display = 'block';
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                } else {
+                    body.style.display = 'none';
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                }
+            } else if (tabId === 'lists') {
+                renderChecklist();
+                renderMemoOutput();
+            }
+        }
+
+        // ====================================================================
+        // 1. PLAN TAB LOGIC
+        // ====================================================================
+
+        function changeDay(day) {
+            currentDay = day;
+            renderItinerary(day);
+            document.querySelectorAll('.day-btn').forEach(btn => {
+                btn.classList.remove('bg-opacity-80');
+                btn.classList.add('bg-opacity-50');
+            });
+            document.querySelector(`.day-btn:nth-child(${day})`).classList.add('bg-opacity-80');
+            document.querySelector(`.day-btn:nth-child(${day})`).classList.remove('bg-opacity-50');
+        }
+
+        function renderItinerary(day) {
+            const container = document.getElementById('plan-itinerary');
+            const dayData = ITINERARY[day];
+            
+            if (!dayData) return;
+
+            let html = `
+                <div class="card p-4 mb-4 weather-banner">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-semibold">${dayData.date} (${dayData.title})</p>
+                            <h3 class="text-2xl font-bold">預計天氣</h3>
+                            <p class="text-xs">晴時多雲 | 12°C / 5°C (請點擊連結查看即時)</p>
+                        </div>
+                        <i class="fas fa-sun text-4xl opacity-70"></i>
+                    </div>
+                    <a href="https://www.jma.go.jp/jma/index.html" target="_blank" class="text-xs mt-2 block font-medium underline">查看日本氣象廳官方預報</a>
+                </div>
+                
+                <div class="space-y-4">
+            `;
+
+            dayData.events.forEach(event => {
+                const timeClass = event.highlight ? 'highlight-time' : 'text-gray-500';
+                
+                let linkHtml = '';
+                if (event.map) {
+                    linkHtml += `<a href="${event.map}" target="_blank" class="text-xs text-blue-500 hover:text-blue-700 mr-3"><i class="fas fa-map-marker-alt"></i> Google Maps</a>`;
+                }
+                if (event.link) {
+                    linkHtml += `<a href="${event.link}" target="_blank" class="text-xs text-green-600 hover:text-green-800"><i class="fas fa-utensils"></i> 食記/連結</a>`;
+                }
+
+                html += `
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="card p-3">
+                            <div class="flex justify-between items-start">
+                                <span class="text-lg font-bold ${timeClass}">${event.time}</span>
+                                <span class="text-sm text-gray-500 mt-0.5">${event.desc}</span>
+                            </div>
+                            <p class="text-xs text-gray-600 mt-1">${event.detail}</p>
+                            <div class="mt-2 text-right">
+                                ${linkHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+        
+        // ====================================================================
+        // 2. GUIDE TAB LOGIC (深度導覽渲染邏輯)
+        // ====================================================================
+        
+        function renderGuideContent() {
+            const container = document.getElementById('guide-content');
+            let html = '';
+            
+            COMPREHENSIVE_GUIDE.forEach(poi => {
+                let categoryColor = 'text-gray-700';
+                switch (poi.category) {
+                    case '景點':
+                        categoryColor = 'text-indigo-700';
+                        break;
+                    case '美食':
+                        categoryColor = 'text-red-700';
+                        break;
+                    case '交通':
+                        categoryColor = 'text-blue-700';
+                        break;
+                    case '住宿':
+                        categoryColor = 'text-green-700';
+                        break;
+                }
+
+                html += `
+                    <div class="card p-4">
+                        <h3 class="text-xl font-bold mb-3 border-b pb-2 ${categoryColor}">
+                            <i class="${poi.icon} mr-2"></i> ${poi.title}
+                        </h3>
+                        <p class="text-xs font-medium text-gray-500 mb-2">【${poi.category}】</p>
+                        <p class="text-sm leading-relaxed mb-3">${poi.description}</p>
+                        <div class="bg-yellow-50 p-2 rounded-lg mb-3">
+                            <p class="text-xs font-medium text-yellow-800"><i class="fas fa-lightbulb mr-1"></i> 旅行小貼士</p>
+                            <p class="text-xs text-yellow-700 mt-1">${poi.tips}</p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-route map-icon text-lg"></i>
+                            <a href="${poi.mapLink}" target="_blank" class="text-sm underline text-blue-500 hover:text-blue-700">Google 地圖導航</a>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // ====================================================================
+        // 3. WALLET TAB LOGIC (記帳與匯率)
+        // ====================================================================
+
+        function saveExpenses() {
+            saveToLocalStorage(STORAGE_KEY_EXPENSES, expenses);
+        }
+
+        function saveExchangeRate() {
+            localStorage.setItem(STORAGE_KEY_RATE, exchangeRate.toFixed(3));
+        }
+
+        // --- Calculator Toggle Logic ---
+        function toggleCalculator() {
+            const body = document.getElementById('calculator-body');
+            const icon = document.getElementById('calculator-toggle-icon');
+            
+            isCalculatorOpen = !isCalculatorOpen;
+
+            if (isCalculatorOpen) {
+                body.style.display = 'block';
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            } else {
+                body.style.display = 'none';
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
+        }
+
+        // --- Calculator Core Logic ---
+        let currentExpression = '';
+
+        function appendToExpression(value) {
+            if (value === 'C') {
+                clearCalculator();
+                return;
+            }
+            if (!isCalculatorOpen) toggleCalculator(); // Auto-open when typing
+            currentExpression += value;
+            document.getElementById('calculator-display').textContent = currentExpression;
+            // Clear TWD result when expression changes
+            document.getElementById('calculator-twd-result').textContent = '約 NT$ 0.00';
+        }
+
+        function clearCalculator() {
+            currentExpression = '';
+            document.getElementById('calculator-display').textContent = '0';
+            document.getElementById('calculator-twd-result').textContent = '約 NT$ 0.00';
+        }
+
+        function calculateResult() {
+            if (currentExpression === '') return;
+
+            let result;
+            try {
+                // Safely evaluate the expression.
+                const safeExpression = currentExpression.replace(/[^0-9+\-*/().]/g, '');
+                result = eval(safeExpression);
+                
+                if (isNaN(result) || !isFinite(result)) {
+                    throw new Error('Invalid calculation');
+                }
+
+                // Update display and store result for next operation start
+                currentExpression = result.toString();
+                document.getElementById('calculator-display').textContent = result.toFixed(0);
+
+                // Convert to TWD
+                const twdResult = result * exchangeRate;
+                document.getElementById('calculator-twd-result').textContent = `約 NT$ ${twdResult.toFixed(2)}`;
+
+            } catch (e) {
+                document.getElementById('calculator-display').textContent = '錯誤';
+                currentExpression = '';
+            }
+        }
+
+        document.getElementById('exchange-rate').addEventListener('input', (e) => {
+            exchangeRate = parseFloat(e.target.value);
+            if (isNaN(exchangeRate)) exchangeRate = 0.22;
+            saveExchangeRate();
+            renderExpenseList(); // Refresh list with new rate
+        });
+
+        // --- Expense Form & Image Handling ---
+
+        document.getElementById('expense-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('item-name').value;
+            const jpy = parseFloat(document.getElementById('item-jpy').value);
+            const type = document.querySelector('input[name="payment-type"]:checked').value;
+            const base64Photo = document.getElementById('photo-base64').value;
+            
+            if (isNaN(jpy) || jpy <= 0) {
+                console.error('請輸入有效的日幣金額');
+                return;
+            }
+
+            const newExpense = {
+                id: Date.now(),
+                name,
+                jpy,
+                twd: (jpy * exchangeRate).toFixed(2),
+                type,
+                date: new Date().toLocaleDateString('zh-TW'),
+                photo: base64Photo || null // Compressed Base64 string
+            };
+
+            expenses.unshift(newExpense);
+            saveExpenses();
+            renderExpenseList();
+
+            // Reset form
+            e.target.reset();
+            document.getElementById('photo-base64').value = '';
+        });
+
+        // Photo Upload Handler (Canvas Compression)
+        document.getElementById('item-photo').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const maxSize = 150; // Thumbnail size
+                    
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    // Resize to fit max size
+                    if (width > height) {
+                        if (width > maxSize) {
+                            height *= maxSize / width;
+                            width = maxSize;
+                        }
+                    } else {
+                        if (height > maxSize) {
+                            width *= maxSize / height;
+                            height = maxSize;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Get compressed Base64 data URL (JPEG, quality 0.7)
+                    const base64String = canvas.toDataURL('image/jpeg', 0.7);
+                    document.getElementById('photo-base64').value = base64String;
+
+                    // Optional: Show preview or confirmation
+                    console.log('Image compressed and stored in hidden field.');
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function deleteExpense(id) {
+            expenses = expenses.filter(exp => exp.id !== id);
+            saveExpenses();
+            renderExpenseList();
+        }
+
+        function renderExpenseList() {
+            const container = document.getElementById('expense-list');
+            if (expenses.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center p-4">目前沒有任何記帳紀錄。</p>';
+                return;
+            }
+
+            let totalJPY = 0;
+            let totalTWD = 0;
+
+            const listHtml = expenses.map(exp => {
+                totalJPY += exp.jpy;
+                totalTWD += parseFloat(exp.jpy * exchangeRate); // Re-calculate based on current rate
+
+                const photoHtml = exp.photo ? 
+                    `<img src="${exp.photo}" alt="收據縮圖" class="w-12 h-12 object-cover rounded-md mr-3 border border-gray-200">` : 
+                    `<div class="w-12 h-12 flex items-center justify-center bg-gray-100 rounded-md mr-3"><i class="fas fa-image text-gray-400"></i></div>`;
+                
+                const typeIcon = exp.type === 'Cash' ? '<i class="fas fa-money-bill-wave text-green-500"></i>' : '<i class="fas fa-credit-card text-red-500"></i>';
+
+                return `
+                    <div class="card p-3 flex justify-between items-center">
+                        <div class="flex items-start">
+                            ${photoHtml}
+                            <div>
+                                <p class="font-medium text-base">${exp.name}</p>
+                                <p class="text-xs text-gray-500">${exp.date} | ${typeIcon} ${exp.type}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-lg text-var(--color-accent)">¥ ${exp.jpy.toLocaleString()}</p>
+                            <p class="text-sm text-gray-600">NT$ ${(exp.jpy * exchangeRate).toFixed(2)}</p>
+                            <button onclick="deleteExpense(${exp.id})" class="text-xs text-red-400 hover:text-red-600 mt-1"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Add total summary at the top
+            const summaryHtml = `
+                <div class="card p-4 bg-var(--color-primary) text-white mb-4">
+                    <p class="text-sm font-light">總花費 (當前匯率 ${exchangeRate.toFixed(3)})</p>
+                    <div class="flex justify-between items-end">
+                        <span class="text-2xl font-bold">NT$ ${totalTWD.toFixed(2)}</span>
+                        <span class="text-base">約 ¥ ${totalJPY.toLocaleString()}</span>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = summaryHtml + listHtml;
+        }
+
+        // ====================================================================
+        // 4. LISTS TAB LOGIC (清單與備忘) - 已更新
+        // ====================================================================
+
+        function saveChecklist() {
+            saveToLocalStorage(STORAGE_KEY_CHECKLIST, checklistItems);
+        }
+
+        // 點擊項目切換狀態
+        function toggleChecklistItem(id) {
+            const item = checklistItems.find(i => i.id === id);
+            if (item) {
+                item.checked = !item.checked;
+                saveChecklist();
+                renderChecklist();
+            }
+        }
+        
+        // 新增自訂清單項目
+        function addChecklistItem() {
+            const input = document.getElementById('new-checklist-item');
+            const text = input.value.trim();
+            if (text) {
+                const newItem = {
+                    id: Date.now(), // 使用時間戳作為唯一 ID
+                    text: text,
+                    checked: false,
+                    removable: true // 標記為可移除
+                };
+                checklistItems.push(newItem);
+                saveChecklist();
+                renderChecklist();
+                input.value = ''; // 清空輸入欄
+            }
+        }
+        
+        // 移除自訂清單項目
+        function removeChecklistItem(id) {
+            checklistItems = checklistItems.filter(i => i.id !== id);
+            saveChecklist();
+            renderChecklist();
+        }
+
+        function renderChecklist() {
+            const container = document.getElementById('checklist-items');
+            
+            const html = checklistItems.map(item => {
+                const textClass = item.checked ? 'line-through text-gray-400' : 'text-gray-700';
+                
+                // 只有可移除的項目 (removable: true) 才會顯示刪除按鈕
+                const removeButton = item.removable ? 
+                    `<button onclick="removeChecklistItem(${item.id})" class="text-red-400 hover:text-red-600 ml-auto p-1"><i class="fas fa-trash-alt"></i></button>` : 
+                    '<div class="w-8"></div>'; // 預留空間用於對齊
+
+                return `
+                    <div class="flex items-center p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                        <!-- 點擊此區域切換狀態 -->
+                        <div class="flex items-center flex-grow" onclick="toggleChecklistItem(${item.id})">
+                            <input type="checkbox" ${item.checked ? 'checked' : ''} class="h-5 w-5 text-var(--color-primary) rounded border-gray-300 focus:ring-var(--color-primary) pointer-events-none">
+                            <span class="ml-3 font-medium ${textClass}">${item.text}</span>
+                        </div>
+                        ${removeButton}
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        // --- Memo Logic ---
+        document.getElementById('memo-text').addEventListener('input', (e) => {
+            const text = e.target.value;
+            localStorage.setItem(STORAGE_KEY_MEMO, text);
+            renderMemoOutput(text);
+        });
+
+        function renderMemoOutput(text) {
+            const container = document.getElementById('memo-links');
+            const memoText = text === undefined ? localStorage.getItem(STORAGE_KEY_MEMO) || '' : text;
+            
+            document.getElementById('memo-text').value = memoText; // Ensure textarea is updated
+
+            // Regex to find URLs (http/https only)
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            const urls = memoText.match(urlRegex) || [];
+            
+            if (urls.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-400">未偵測到任何網址。</p>';
+                return;
+            }
+
+            const linkHtml = urls.map((url, index) => {
+                // Determine display text (remove http/https for cleaner look)
+                const displayText = url.replace(/^(https?:\/\/)/, '').replace(/\/$/, '');
+
+                return `
+                    <a href="${url}" target="_blank" class="btn-primary flex items-center justify-center text-sm p-2 bg-indigo-500 hover:bg-indigo-600">
+                        <i class="fas fa-link mr-2"></i> ${displayText}
+                    </a>
+                `;
+            }).join('');
+
+            container.innerHTML = linkHtml;
+        }
+
+        // ====================================================================
+        // PWA & APP CONTROL LOGIC (新增)
+        // ====================================================================
+
+        function isStandalone() {
+            // 偵測是否在獨立模式（PWA）下運行
+            return (window.matchMedia('(display-mode: standalone)').matches || document.referrer.includes('android-app://') || navigator.standalone);
+        }
+
+        function setupPWA() {
+            // 1. 動態生成 Manifest 檔
+            const manifest = {
+                name: "岡山輕旅 PWA",
+                short_name: "岡山輕旅",
+                description: "你的岡山四日輕旅行小幫手，包含行程、導覽、記帳與清單。",
+                start_url: "./index.html",
+                display: "standalone",
+                theme_color: "#5A7F7A",
+                background_color: "#F0EDE5",
+                icons: [
+                    {
+                        src: "https://placehold.co/192x192/5A7F7A/FFFFFF?text=JP",
+                        sizes: "192x192",
+                        type: "image/png"
+                    },
+                    {
+                        src: "https://placehold.co/512x512/5A7F7A/FFFFFF?text=JP",
+                        sizes: "512x512",
+                        type: "image/png"
+                    }
+                ]
+            };
+
+            const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+            const manifestUrl = URL.createObjectURL(manifestBlob);
+            document.getElementById('manifest-link').setAttribute('href', manifestUrl);
+
+            // 2. 隱藏 Splash Screen (模擬 App 啟動)
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                if (splash) {
+                    splash.classList.add('hidden-splash');
+                    // 確保動畫結束後移除 DOM，避免點擊影響
+                    setTimeout(() => {
+                        splash.remove();
+                    }, 600); 
+                }
+            }, 1500); // 模擬 App 啟動時間 1.5 秒
+
+            // 3. 偵測並顯示加入主畫面提示 (如果不是獨立 App 模式)
+            const prompt = document.getElementById('a2hs-prompt');
+            if (prompt) {
+                if (!isStandalone()) {
+                    prompt.style.display = 'flex';
+                } else {
+                    prompt.style.display = 'none';
+                }
+            }
+        }
+
+
+        // ====================================================================
+        // INITIAL SETUP (DOM READY)
+        // ====================================================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // PWA Setup (必須在 DOM 載入後執行)
+            setupPWA(); 
+            
+            // Load all data
+            expenses = loadFromLocalStorage(STORAGE_KEY_EXPENSES, []);
+            checklistItems = loadFromLocalStorage(STORAGE_KEY_CHECKLIST, null);
+            exchangeRate = parseFloat(localStorage.getItem(STORAGE_KEY_RATE)) || 0.22;
+
+            // 第一次載入時，如果清單為空，則初始化固定清單項目
+            if (!checklistItems || checklistItems.length === 0) {
+                 checklistItems = INITIAL_CHECKLIST_STRINGS.map((text, index) => ({
+                    id: index + 1,
+                    text: text,
+                    checked: false,
+                    removable: false // 預設項目不可移除
+                }));
+                saveChecklist();
+            }
+            
+            // Set initial state
+            document.getElementById('exchange-rate').value = exchangeRate.toFixed(3);
+            
+            // Show default tab (PLAN)
+            showTab('plan');
+            changeDay(1);
+        });
+
+    </script>
+</body>
+</html>
