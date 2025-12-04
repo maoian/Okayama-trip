@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>岡山漫旅 Okayama Trip</title>
+    <title>岡山漫旅 Pro Plan</title>
     
     <!-- PWA Settings for iOS & Android -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -99,7 +99,7 @@
     <div id="splash-screen">
         <div class="text-4xl text-jp-green mb-4"><i class="fa-solid fa-paper-plane"></i></div>
         <h1 class="text-2xl font-bold tracking-widest text-jp-dark">OKAYAMA</h1>
-        <p class="text-sm text-jp-gray mt-2">TRAVEL DIARY</p>
+        <p class="text-sm text-jp-gray mt-2">PRO TRAVEL PLAN</p>
         <div class="mt-8 flex space-x-2">
             <div class="w-2 h-2 bg-jp-red rounded-full animate-bounce" style="animation-delay: 0s"></div>
             <div class="w-2 h-2 bg-jp-green rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
@@ -116,10 +116,13 @@
                 <h1 class="text-3xl font-bold text-jp-dark">Itinerary</h1>
                 <p class="text-sm text-jp-gray">岡山・倉敷・香川四天三夜</p>
             </div>
-            <div class="text-right">
-                <div class="text-xs font-bold bg-jp-green text-white px-2 py-1 rounded-full">
-                    <i class="fa-solid fa-cloud"></i> 7°C
+            <!-- UPDATED: More detailed Weather Info -->
+            <div class="text-right bg-white rounded-xl p-3 shadow-soft border border-gray-100">
+                <div class="text-xs font-bold text-jp-dark mb-1 flex items-center justify-end">
+                    <i class="fa-solid fa-cloud-sun-rain text-blue-500 mr-1"></i> 今日天氣: 多雲
                 </div>
+                <p class="text-[10px] text-gray-500">溫度: 7°C / 15°C</p>
+                <p class="text-[10px] text-gray-500">降雨機率: 10%</p>
             </div>
         </header>
 
@@ -155,7 +158,7 @@
     <div id="page-guide" class="page-content px-4 pt-6">
         <header class="mb-6">
             <h1 class="text-3xl font-bold text-jp-dark">Travel Guide</h1>
-            <p class="text-sm text-jp-gray">景點深度導覽與 AI 助手</p>
+            <p class="text-sm text-jp-gray">景點、美食、交通深度導覽 (共 <span id="guide-count">0</span> 個地點)</p>
         </header>
         
         <div id="guide-container" class="space-y-6">
@@ -163,7 +166,7 @@
         </div>
     </div>
 
-    <!-- 3. WALLET PAGE -->
+    <!-- 3. WALLET PAGE (Unchanged) -->
     <div id="page-wallet" class="page-content px-4 pt-6">
         <header class="mb-4">
             <h1 class="text-3xl font-bold text-jp-dark">Wallet</h1>
@@ -234,7 +237,7 @@
         </div>
     </div>
 
-    <!-- 4. LISTS PAGE -->
+    <!-- 4. LISTS PAGE (Unchanged) -->
     <div id="page-lists" class="page-content px-4 pt-6">
         <header class="mb-6">
             <h1 class="text-3xl font-bold text-jp-dark">Lists</h1>
@@ -272,7 +275,7 @@
         </div>
     </div>
 
-    <!-- 5. INFO PAGE -->
+    <!-- 5. INFO PAGE (Unchanged) -->
     <div id="page-info" class="page-content px-4 pt-6">
         <header class="mb-6">
             <h1 class="text-3xl font-bold text-jp-dark">Info</h1>
@@ -364,72 +367,42 @@
         const GEMINI_API_KEY = "";
         const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
 
-        // --- DATA ---
+        // --- DATA (UPDATED: Added transport, icon, type, and mapQuery to ALL relevant items) ---
         const itinerary = {
             day1: [
-                { time: "14:35", title: "抵達岡山機場", desc: "接駁巴士前往市區", type: "transport" },
-                { time: "15:30", title: "飯店 Check-in", desc: "せかんどゆーす西口 505號", link: "https://maps.google.com/?q=Okayama, Kita Ward, Hokancho, 1 Chome−2−3" },
-                { time: "16:00", title: "岡山後樂園", desc: "日本三大名園之一", highlight: true, link: "https://maps.google.com/?q=Okayama+Korakuen" },
-                { time: "17:30", title: "岡山城", desc: "外圍拍照", link: "https://maps.google.com/?q=Okayama+Castle" },
-                { time: "18:30", title: "晚餐：Gaho 雅芳", desc: "美味壽喜燒", type: "food", link: "https://maps.google.com/?q=Gaho+Okayama" },
-                { time: "19:30", title: "AEON Mall", desc: "永旺夢樂城逛街", link: "https://maps.google.com/?q=AEON+Mall+Okayama" }
+                { time: "14:35", title: "抵達岡山機場 (OKJ)", desc: "搭乘接駁巴士前往市區。", transport: "Bus", icon: "fa-plane-arrival", type: "airport", mapQuery: "Okayama+Airport" },
+                { time: "15:30", title: "飯店 Check-in", desc: "せかんどゆーす西口 505號。", transport: "Walk", icon: "fa-bed", type: "hotel", link: "https://maps.google.com/?q=Okayama, Kita Ward, Hokancho, 1 Chome−2−3" },
+                { time: "16:00", title: "岡山後樂園", desc: "日本三大名園之一。", highlight: true, transport: "Walk", icon: "fa-tree", type: "landmark", mapQuery: "Okayama+Korakuen", link: "https://maps.google.com/?q=Okayama+Korakuen" },
+                { time: "17:30", title: "岡山城", desc: "外圍拍照，適合傍晚光線。", transport: "Walk", icon: "fa-fort-awesome", type: "landmark", mapQuery: "Okayama+Castle", link: "https://maps.google.com/?q=Okayama+Castle" },
+                { time: "18:30", title: "晚餐：Gaho 雅芳", desc: "美味壽喜燒，需預約。", type: "food", transport: "Tram", icon: "fa-bowl-rice", mapQuery: "Gaho+Okayama+Sukiyaki", link: "https://maps.google.com/?q=Gaho+Okayama" },
+                { time: "19:30", title: "AEON Mall", desc: "永旺夢樂城逛街購物。", transport: "Walk", icon: "fa-bag-shopping", type: "shopping", mapQuery: "AEON+Mall+Okayama", link: "https://maps.google.com/?q=AEON+Mall+Okayama" }
             ],
             day2: [
-                { time: "08:20", title: "出門", highlight: true },
-                { time: "09:30", title: "倉敷美觀地區", desc: "小船 / 阿智神社 / 倉敷桃子 / 牛仔褲街", highlight: true, link: "https://maps.google.com/?q=Kurashiki+Bikan+Historical+Quarter" },
-                { time: "14:00", title: "吉備津神社", desc: "桃太郎傳說原型", link: "https://maps.google.com/?q=Kibitsu+Shine" },
-                { time: "17:00", title: "晚餐", desc: "岡山市區" }
+                { time: "08:20", title: "出門", highlight: true, transport: "Walk", icon: "fa-house-user", type: "start" },
+                { time: "09:30", title: "倉敷美觀地區", desc: "白壁宅邸、倉敷川小船流。", highlight: true, transport: "JR Train", icon: "fa-train-subway", type: "landmark", mapQuery: "Kurashiki+Bikan+Historical+Quarter", link: "https://maps.google.com/?q=Kurashiki+Bikan+Historical+Quarter" },
+                { time: "11:30", title: "倉敷桃子 (甜點)", desc: "品嚐水果聖代。", type: "food", transport: "Walk", icon: "fa-ice-cream", mapQuery: "Kurashiki+Momoko", link: "https://maps.google.com/?q=Kurashiki+Momoko" },
+                { time: "14:00", title: "吉備津神社", desc: "桃太郎傳說原型，長長的迴廊。", transport: "JR Train", icon: "fa-torii-gate", type: "shrine", mapQuery: "Kibitsu+Shine", link: "https://maps.google.com/?q=Kibitsu+Shine" },
+                { time: "17:00", title: "晚餐：炭焼あぶり 居酒屋", desc: "在地居酒屋體驗。", type: "food", transport: "JR Train", icon: "fa-fish-fins", mapQuery: "Charcoal+Grill+Aburi+Okayama", link: "https://maps.google.com/?q=Charcoal+Grill+Aburi+Okayama" }
             ],
             day3: [
-                { time: "08:00", title: "早餐：STAND1-1", desc: "貝果，搭路面電車", type: "food", link: "https://maps.google.com/?q=STAND1-1+Okayama" },
-                { time: "08:40", title: "前往 Budget 租車", desc: "走路前往岡山駅前西口店", highlight: true },
-                { time: "09:00", title: "租車出發", desc: "開車前往四國", type: "transport" },
-                { time: "09:40", title: "鷲羽山展望台", desc: "眺望瀨戶大橋", link: "https://maps.google.com/?q=Washuzan+Observatory" },
-                { time: "10:40", title: "金刀比羅宮", desc: "表參道散策 (爬樓梯挑戰)", highlight: true, link: "https://maps.google.com/?q=Kotohira-gu" },
-                { time: "15:10", title: "四國水族館", desc: "夢幻水景", link: "https://maps.google.com/?q=Shikoku+Aquarium" },
-                { time: "18:20", title: "返回岡山", desc: "市區晚餐" }
+                { time: "08:00", title: "早餐：STAND1-1", desc: "享用貝果，搭路面電車。", type: "food", transport: "Tram", icon: "fa-mug-hot", mapQuery: "STAND1-1+Okayama+Bagel", link: "https://maps.google.com/?q=STAND1-1+Okayama" },
+                { time: "08:40", title: "前往 Budget 租車", desc: "走路前往岡山駅前西口店。", highlight: true, transport: "Walk", icon: "fa-car-side", type: "car-rental" },
+                { time: "09:00", title: "租車出發", desc: "開車經瀨戶大橋前往四國。", transport: "Drive", icon: "fa-road", type: "transport" },
+                { time: "09:40", title: "鷲羽山展望台", desc: "眺望瀨戶大橋的壯麗景色。", transport: "Drive", icon: "fa-mountain-sun", type: "landmark", mapQuery: "Washuzan+Observatory", link: "https://maps.google.com/?q=Washuzan+Observatory" },
+                { time: "10:40", title: "金刀比羅宮", desc: "挑戰 785 階石階。", highlight: true, transport: "Drive", icon: "fa-stairs", type: "shrine", mapQuery: "Kotohira-gu", link: "https://maps.google.com/?q=Kotohira-gu" },
+                { time: "15:10", title: "四國水族館", desc: "主題水族館，必看海豚秀。", transport: "Drive", icon: "fa-fish", type: "attraction", mapQuery: "Shikoku+Aquarium", link: "https://maps.google.com/?q=Shikoku+Aquarium" },
+                { time: "18:20", title: "返回岡山", desc: "經瀨戶大橋，市區晚餐。", transport: "Drive", icon: "fa-road", type: "transport" }
             ],
             day4: [
-                { time: "08:30", title: "還車", desc: "Budget 岡山駅前西口店", highlight: true },
-                { time: "AM", title: "自由活動", desc: "整理行李 / 住宿周邊" },
-                { time: "12:00", title: "前往機場", desc: "搭乘接駁巴士", type: "transport" },
-                { time: "15:25", title: "虎航 IT215", desc: "飛往台北", highlight: true }
+                { time: "08:30", title: "還車", desc: "Budget 岡山駅前西口店。", highlight: true, transport: "Walk", icon: "fa-car-burst", type: "car-rental" },
+                { time: "AM", title: "自由活動", desc: "整理行李 / 購買伴手禮。", transport: "Walk", icon: "fa-gifts", type: "shopping" },
+                { time: "12:00", title: "前往機場", desc: "搭乘接駁巴士。", transport: "Bus", icon: "fa-bus-simple", type: "transport" },
+                { time: "15:25", title: "虎航 IT215", desc: "飛往台北。", highlight: true, transport: "Plane", icon: "fa-plane-departure", type: "airport" }
             ]
         };
 
-        const guideData = [
-            {
-                title: "岡山後樂園",
-                subtitle: "日本三大名園",
-                desc: "獲得米其林三星評價的庭園。四季景色不同，特別是唯心山上的視野極佳。建議下午前往，夕陽光線最美。",
-                mapQuery: "Okayama+Korakuen",
-                tags: ["必訪", "拍照"]
-            },
-            {
-                title: "倉敷美觀地區",
-                subtitle: "白壁宅邸與倉敷川",
-                desc: "江戶時代的運河景觀。推薦體驗「川舟流」搭小船遊河。阿智神社位於高處，可俯瞰整個街區。務必品嚐「倉敷桃子」的水果聖代。",
-                mapQuery: "Kurashiki+Bikan+Historical+Quarter",
-                tags: ["散策", "甜點", "古蹟"]
-            },
-            {
-                title: "金刀比羅宮",
-                subtitle: "一生必去一次的神社",
-                desc: "供奉海上交通守護神。最著名的是通往本宮的 785 階石階（加上奧社共 1368 階）。沿途有許多店家，可以邊逛邊爬，記得租借登山杖。",
-                mapQuery: "Kotohira-gu",
-                tags: ["體力活", "神社", "四國"]
-            },
-            {
-                title: "四國水族館",
-                subtitle: "四國最大級水族館",
-                desc: "以「四國水景」為主題，利用光影打造出夢幻氛圍。必看海豚秀，背景就是瀨戶內海。",
-                mapQuery: "Shikoku+Aquarium",
-                tags: ["室內", "親子", "打卡"]
-            }
-        ];
-
         // --- GEMINI API HELPERS ---
-
+        // (保持不變)
         /**
          * 處理 Gemini API 呼叫，支援指數退避。
          * @param {object} payload - API 請求的內容
@@ -484,11 +457,12 @@
         }
 
         /**
-         * 呼叫 Gemini 取得景點深度導覽資訊
+         * 呼叫 Gemini 取得景點深度導覽資訊 (適用於所有地點)
          * @param {number} index - guideData 陣列的索引
          */
         async function getDeepDiveGuide(index) {
-            const item = guideData[index];
+            const guideList = generateGuideList();
+            const item = guideList[index];
             const landmark = item.title;
             const container = document.getElementById(`guide-response-${index}`);
             const btn = document.getElementById(`guide-btn-${index}`);
@@ -498,7 +472,7 @@
             container.innerHTML = `<div class="text-center text-jp-gray"><i class="fa-solid fa-spinner fa-spin mr-2"></i>AI 正在為您搜尋 ${landmark} 的深度資訊...</div>`;
             btn.disabled = true;
 
-            const userQuery = `請提供關於 ${landmark} (位於岡山/四國) 的 3 個簡短但有趣的冷知識或特色介紹。請用繁體中文。`;
+            const userQuery = `請提供關於 ${landmark} (位於岡山、倉敷或香川) 的 3 個簡短但有趣的冷知識或特色介紹。地點類型：${item.type}。請用繁體中文。`;
             const systemPrompt = "您是一位熱情且知識淵博的日本在地導遊。請根據最新的網路資訊，以條列式清單 (1., 2., 3.) 格式，為旅客提供景點的深度介紹。內容應簡潔、有趣，並具有深度。";
 
             const payload = {
@@ -576,6 +550,28 @@
             renderDay(day);
         }
 
+        /**
+         * 根據交通方式回傳對應的 Tailwind 顏色
+         * @param {string} transport
+         */
+        function getTransportColor(transport) {
+            switch(transport) {
+                case 'Bus':
+                case 'Tram':
+                    return 'text-blue-500';
+                case 'JR Train':
+                    return 'text-green-600';
+                case 'Drive':
+                    return 'text-red-500';
+                case 'Walk':
+                    return 'text-jp-gray';
+                case 'Plane':
+                    return 'text-indigo-500';
+                default:
+                    return 'text-gray-500';
+            }
+        }
+
         function renderDay(dayKey) {
             const container = document.getElementById('day-content');
             const items = itinerary[dayKey];
@@ -591,11 +587,21 @@
                     linkBtn = `<a href="${item.link}" target="_blank" class="absolute right-4 top-4 text-gray-300 hover:text-jp-dark"><i class="fa-solid fa-location-arrow"></i></a>`;
                 }
 
+                // UPDATED: Include transport method and icon
+                const transportColor = getTransportColor(item.transport);
+                const transportHtml = item.transport ? 
+                    `<div class="text-xs font-bold flex items-center gap-1 ${transportColor}"><i class="fa-solid ${item.icon}"></i> ${item.transport}</div>` : 
+                    `<div class="text-xs font-bold text-gray-400 flex items-center gap-1"><i class="fa-solid ${item.icon}"></i> -</div>`;
+
+
                 html += `
                 <div class="ml-6 relative">
                     <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full border-2 ${dotClass}"></div>
                     <div class="${bgClass} rounded-xl p-4 shadow-sm pr-10 relative">
-                        <span class="text-xs font-bold ${colorClass}">${item.time}</span>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold ${colorClass}">${item.time}</span>
+                            ${transportHtml}
+                        </div>
                         <h3 class="font-bold text-jp-dark text-lg">${item.title}</h3>
                         <p class="text-sm text-gray-600 mt-1">${item.desc}</p>
                         ${linkBtn}
@@ -606,12 +612,54 @@
             container.innerHTML = html;
         }
 
-        // --- GUIDE LOGIC ---
+        // --- GUIDE LOGIC (UPDATED: Generate comprehensive guide list) ---
+        
+        /**
+         * 從行程中提取所有獨特的景點、美食和重要地點
+         */
+        function generateGuideList() {
+            const uniqueItems = {};
+            Object.values(itinerary).flat().forEach(item => {
+                // 只納入有 title 且不是純粹的 'transport' 行程點 (但機場/還車等重要點納入)
+                if (item.title && 
+                    !['transport', 'start'].includes(item.type) && 
+                    !uniqueItems[item.title]) {
+
+                    let tags = [];
+                    switch (item.type) {
+                        case 'airport': tags = ["交通樞紐", "出入境"]; break;
+                        case 'hotel': tags = ["住宿", "Check-in"]; break;
+                        case 'landmark': tags = ["必訪", "觀光"]; break;
+                        case 'food': tags = ["美食", "餐廳"]; break;
+                        case 'shopping': tags = ["購物", "百貨"]; break;
+                        case 'shrine': tags = ["文化", "神社"]; break;
+                        case 'attraction': tags = ["遊樂", "活動"]; break;
+                        case 'car-rental': tags = ["服務", "租車"]; break;
+                        default: tags = [item.type || '探索'];
+                    }
+
+                    uniqueItems[item.title] = {
+                        title: item.title,
+                        subtitle: item.desc ? item.desc.split('，')[0] : (item.type === 'food' ? '餐廳美食' : item.type === 'landmark' ? '景點' : '地點'),
+                        desc: item.desc || "點擊深入導覽以獲取更多資訊。",
+                        mapQuery: item.mapQuery || item.title,
+                        tags: tags,
+                        type: item.type,
+                        link: item.link
+                    };
+                }
+            });
+            return Object.values(uniqueItems);
+        }
+
         function renderGuide() {
             const container = document.getElementById('guide-container');
+            const guideList = generateGuideList();
+            
+            document.getElementById('guide-count').innerText = guideList.length;
             container.innerHTML = '';
             
-            guideData.forEach((item, index) => {
+            guideList.forEach((item, index) => {
                 // Google Maps Iframe 嵌入
                 const mapEmbed = `https://maps.google.com/maps?q=${item.mapQuery}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
                 
@@ -653,7 +701,8 @@
             });
         }
 
-        // --- WALLET LOGIC (Omitted for brevity, assumed unchanged) ---
+
+        // --- WALLET LOGIC (Unchanged) ---
         function updateRate() {
             const rate = document.getElementById('exchange-rate').value;
             localStorage.setItem('trip_rate', rate);
@@ -805,7 +854,7 @@
             document.getElementById('total-twd').innerText = Math.round(totalJPY * rate).toLocaleString();
         }
 
-        // --- LISTS LOGIC (Omitted for brevity, assumed unchanged) ---
+        // --- LISTS LOGIC (Unchanged) ---
         const defaultChecklist = [
             "護照", "網卡 (eSim/實體)", "日幣現金", "信用卡 (海外回饋)", 
             "充電線 / 行動電源", "個人藥品", "牙刷牙膏", "換洗衣物",
