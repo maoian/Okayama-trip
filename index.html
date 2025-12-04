@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>岡山漫旅 Pro Plan</title>
+    <title>岡山漫旅 Pro Plan (可編輯導覽)</title>
     
     <!-- PWA Settings for iOS & Android -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -91,6 +91,19 @@
             background-color: #fcfaf2;
             -webkit-tap-highlight-color: transparent;
         }
+        /* Style for editable fields */
+        .editable-input {
+            border: 1px dashed #d1d5db;
+            padding: 4px;
+            border-radius: 4px;
+            font-size: 0.875rem; /* text-sm */
+            width: 100%;
+            background-color: #f9fafb;
+        }
+        .editable-input:focus {
+            outline: none;
+            border-color: #8a9a6b; /* jp-green */
+        }
     </style>
 </head>
 <body class="text-jp-dark bg-jp-bg select-none">
@@ -116,7 +129,7 @@
                 <h1 class="text-3xl font-bold text-jp-dark">Itinerary</h1>
                 <p class="text-sm text-jp-gray">岡山・倉敷・香川四天三夜</p>
             </div>
-            <!-- UPDATED: More detailed Weather Info -->
+            <!-- Weather Info -->
             <div class="text-right bg-white rounded-xl p-3 shadow-soft border border-gray-100">
                 <div class="text-xs font-bold text-jp-dark mb-1 flex items-center justify-end">
                     <i class="fa-solid fa-cloud-sun-rain text-blue-500 mr-1"></i> 今日天氣: 多雲
@@ -125,6 +138,13 @@
                 <p class="text-[10px] text-gray-500">降雨機率: 10%</p>
             </div>
         </header>
+
+        <!-- Edit/Save Button -->
+        <div class="flex justify-end mb-4">
+            <button id="edit-toggle-btn" onclick="toggleEditMode()" class="bg-jp-red text-white px-4 py-2 rounded-full text-sm font-bold shadow-md active:scale-95 transition">
+                <i class="fa-solid fa-pen-to-square mr-1"></i> 編輯行程
+            </button>
+        </div>
 
         <!-- Essential Info Card -->
         <div class="bg-white rounded-2xl p-4 shadow-soft mb-6 border-l-4 border-jp-red">
@@ -149,16 +169,22 @@
         </div>
 
         <!-- Timeline Container -->
-        <div id="day-content">
-            <!-- Content injected via JS -->
+        <div id="day-content" class="min-h-[200px] flex items-center justify-center text-jp-gray">
+            <i class="fa-solid fa-plane-departure fa-spin mr-2"></i> 正在載入行程資料...
         </div>
     </div>
 
     <!-- 2. GUIDE PAGE -->
     <div id="page-guide" class="page-content px-4 pt-6">
-        <header class="mb-6">
-            <h1 class="text-3xl font-bold text-jp-dark">Travel Guide</h1>
-            <p class="text-sm text-jp-gray">景點、美食、交通深度導覽 (共 <span id="guide-count">0</span> 個地點)</p>
+        <header class="mb-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-jp-dark">Travel Guide</h1>
+                <p class="text-sm text-jp-gray">景點、美食、交通深度導覽 (共 <span id="guide-count">0</span> 個地點)</p>
+            </div>
+             <!-- Edit/Save Button for Guide -->
+            <button id="guide-edit-toggle-btn" onclick="toggleGuideEditMode()" class="bg-jp-red text-white px-4 py-2 rounded-full text-sm font-bold shadow-md active:scale-95 transition">
+                <i class="fa-solid fa-pen-to-square mr-1"></i> 編輯導覽
+            </button>
         </header>
         
         <div id="guide-container" class="space-y-6">
@@ -201,7 +227,7 @@
             <div class="grid grid-cols-2 gap-3 mb-3">
                 <input type="text" id="expense-item" placeholder="品項 (如: 晚餐)" class="col-span-2 bg-gray-50 border-0 rounded-lg p-3 text-sm focus:ring-2 focus:ring-jp-green">
                 <input type="number" id="expense-amount" placeholder="日幣金額" class="bg-gray-50 border-0 rounded-lg p-3 text-sm focus:ring-2 focus:ring-jp-green">
-                <select id="expense-type" class="bg-gray-50 border-0 rounded-lg p-3 text-sm">
+                <select type="text" id="expense-type" class="bg-gray-50 border-0 rounded-lg p-3 text-sm">
                     <option value="cash">現金</option>
                     <option value="card">信用卡</option>
                 </select>
@@ -335,7 +361,7 @@
     <!-- BOTTOM NAVIGATION -->
     <nav class="fixed bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-100 pb-safe z-40">
         <div class="flex justify-around items-center h-16">
-            <button onclick="switchTab('page-plan')" class="nav-btn active flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-jp-dark transition">
+            <button onclick="switchTab('page-plan')" class="nav-btn active flex flex-col items-center justify-center w-full h-full text-jp-dark hover:text-jp-dark transition">
                 <i class="fa-solid fa-calendar-days text-xl mb-1"></i>
                 <span class="text-[10px]">Plan</span>
             </button>
@@ -366,43 +392,48 @@
         // 設定 Gemini API 金鑰
         const GEMINI_API_KEY = "";
         const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
-
-        // --- DATA (UPDATED: Added transport, icon, type, and mapQuery to ALL relevant items) ---
-        const itinerary = {
-            day1: [
-                { time: "14:35", title: "抵達岡山機場 (OKJ)", desc: "搭乘接駁巴士前往市區。", transport: "Bus", icon: "fa-plane-arrival", type: "airport", mapQuery: "Okayama+Airport" },
-                { time: "15:30", title: "飯店 Check-in", desc: "せかんどゆーす西口 505號。", transport: "Walk", icon: "fa-bed", type: "hotel", link: "https://maps.google.com/?q=Okayama, Kita Ward, Hokancho, 1 Chome−2−3" },
-                { time: "16:00", title: "岡山後樂園", desc: "日本三大名園之一。", highlight: true, transport: "Walk", icon: "fa-tree", type: "landmark", mapQuery: "Okayama+Korakuen", link: "https://maps.google.com/?q=Okayama+Korakuen" },
-                { time: "17:30", title: "岡山城", desc: "外圍拍照，適合傍晚光線。", transport: "Walk", icon: "fa-fort-awesome", type: "landmark", mapQuery: "Okayama+Castle", link: "https://maps.google.com/?q=Okayama+Castle" },
-                { time: "18:30", title: "晚餐：Gaho 雅芳", desc: "美味壽喜燒，需預約。", type: "food", transport: "Tram", icon: "fa-bowl-rice", mapQuery: "Gaho+Okayama+Sukiyaki", link: "https://maps.google.com/?q=Gaho+Okayama" },
-                { time: "19:30", title: "AEON Mall", desc: "永旺夢樂城逛街購物。", transport: "Walk", icon: "fa-bag-shopping", type: "shopping", mapQuery: "AEON+Mall+Okayama", link: "https://maps.google.com/?q=AEON+Mall+Okayama" }
+        
+        // 預設行程資料 (已從外部 JSON 檔移至此處)
+        const defaultItinerary = {
+            "day1": [
+                { "time": "14:35", "title": "抵達岡山機場 (OKJ)", "desc": "搭乘接駁巴士前往市區。", "transport": "Bus", "icon": "fa-plane-arrival", "type": "airport", "mapQuery": "Okayama+Airport" },
+                { "time": "15:30", "title": "飯店 Check-in", "desc": "せかんどゆーす西口 505號。", "transport": "Walk", "icon": "fa-bed", "type": "hotel", "link": "https://maps.google.com/?q=Okayama, Kita Ward, Hokancho, 1 Chome−2−3" },
+                { "time": "16:00", "title": "岡山後樂園", "desc": "日本三大名園之一。", "highlight": true, "transport": "Walk", "icon": "fa-tree", "type": "landmark", "mapQuery": "Okayama+Korakuen", "link": "https://maps.google.com/?q=Okayama+Korakuen" },
+                { "time": "17:30", "title": "岡山城", "desc": "外圍拍照，適合傍晚光線。", "transport": "Walk", "icon": "fa-fort-awesome", "type": "landmark", "mapQuery": "Okayama+Castle", "link": "https://maps.google.com/?q=Okayama+Castle" },
+                { "time": "18:30", "title": "晚餐：Gaho 雅芳", "desc": "美味壽喜燒，需預約。", "type": "food", "transport": "Tram", "icon": "fa-bowl-rice", "mapQuery": "Gaho+Okayama+Sukiyaki", "link": "https://maps.google.com/?q=Gaho+Okayama" },
+                { "time": "19:30", "title": "AEON Mall", "desc": "永旺夢樂城逛街購物。", "transport": "Walk", "icon": "fa-bag-shopping", "type": "shopping", "mapQuery": "AEON+Mall+Okayama", "link": "https://maps.google.com/?q=AEON+Mall+Okayama" }
             ],
-            day2: [
-                { time: "08:20", title: "出門", highlight: true, transport: "Walk", icon: "fa-house-user", type: "start" },
-                { time: "09:30", title: "倉敷美觀地區", desc: "白壁宅邸、倉敷川小船流。", highlight: true, transport: "JR Train", icon: "fa-train-subway", type: "landmark", mapQuery: "Kurashiki+Bikan+Historical+Quarter", link: "https://maps.google.com/?q=Kurashiki+Bikan+Historical+Quarter" },
-                { time: "11:30", title: "倉敷桃子 (甜點)", desc: "品嚐水果聖代。", type: "food", transport: "Walk", icon: "fa-ice-cream", mapQuery: "Kurashiki+Momoko", link: "https://maps.google.com/?q=Kurashiki+Momoko" },
-                { time: "14:00", title: "吉備津神社", desc: "桃太郎傳說原型，長長的迴廊。", transport: "JR Train", icon: "fa-torii-gate", type: "shrine", mapQuery: "Kibitsu+Shine", link: "https://maps.google.com/?q=Kibitsu+Shine" },
-                { time: "17:00", title: "晚餐：炭焼あぶり 居酒屋", desc: "在地居酒屋體驗。", type: "food", transport: "JR Train", icon: "fa-fish-fins", mapQuery: "Charcoal+Grill+Aburi+Okayama", link: "https://maps.google.com/?q=Charcoal+Grill+Aburi+Okayama" }
+            "day2": [
+                { "time": "08:20", "title": "出門", "highlight": true, "transport": "Walk", "icon": "fa-house-user", "type": "start" },
+                { "time": "09:30", "title": "倉敷美觀地區", "desc": "白壁宅邸、倉敷川小船流。", "highlight": true, "transport": "JR Train", "icon": "fa-train-subway", "type": "landmark", "mapQuery": "Kurashiki+Bikan+Historical+Quarter", "link": "https://maps.google.com/?q=Kurashiki+Bikan+Historical+Quarter" },
+                { "time": "11:30", "title": "倉敷桃子 (甜點)", "desc": "品嚐水果聖代。", "type": "food", "transport": "Walk", "icon": "fa-ice-cream", "mapQuery": "Kurashiki+Momoko", "link": "https://maps.google.com/?q=Kurashiki+Momoko" },
+                { "time": "14:00", "title": "吉備津神社", "desc": "桃太郎傳說原型，長長的迴廊。", "transport": "JR Train", "icon": "fa-torii-gate", "type": "shrine", "mapQuery": "Kibitsu+Shine", "link": "https://maps.google.com/?q=Kibitsu+Shine" },
+                { "time": "17:00", "title": "晚餐：炭焼あぶり 居酒屋", "desc": "在地居酒屋體驗。", "type": "food", "transport": "JR Train", "icon": "fa-fish-fins", "mapQuery": "Charcoal+Grill+Aburi+Okayama", "link": "https://maps.google.com/?q=Charcoal+Grill+Aburi+Okayama" }
             ],
-            day3: [
-                { time: "08:00", title: "早餐：STAND1-1", desc: "享用貝果，搭路面電車。", type: "food", transport: "Tram", icon: "fa-mug-hot", mapQuery: "STAND1-1+Okayama+Bagel", link: "https://maps.google.com/?q=STAND1-1+Okayama" },
-                { time: "08:40", title: "前往 Budget 租車", desc: "走路前往岡山駅前西口店。", highlight: true, transport: "Walk", icon: "fa-car-side", type: "car-rental" },
-                { time: "09:00", title: "租車出發", desc: "開車經瀨戶大橋前往四國。", transport: "Drive", icon: "fa-road", type: "transport" },
-                { time: "09:40", title: "鷲羽山展望台", desc: "眺望瀨戶大橋的壯麗景色。", transport: "Drive", icon: "fa-mountain-sun", type: "landmark", mapQuery: "Washuzan+Observatory", link: "https://maps.google.com/?q=Washuzan+Observatory" },
-                { time: "10:40", title: "金刀比羅宮", desc: "挑戰 785 階石階。", highlight: true, transport: "Drive", icon: "fa-stairs", type: "shrine", mapQuery: "Kotohira-gu", link: "https://maps.google.com/?q=Kotohira-gu" },
-                { time: "15:10", title: "四國水族館", desc: "主題水族館，必看海豚秀。", transport: "Drive", icon: "fa-fish", type: "attraction", mapQuery: "Shikoku+Aquarium", link: "https://maps.google.com/?q=Shikoku+Aquarium" },
-                { time: "18:20", title: "返回岡山", desc: "經瀨戶大橋，市區晚餐。", transport: "Drive", icon: "fa-road", type: "transport" }
+            "day3": [
+                { "time": "08:00", "title": "早餐：STAND1-1", "desc": "享用貝果，搭路面電車。", "type": "food", "transport": "Tram", "icon": "fa-mug-hot", "mapQuery": "STAND1-1+Okayama+Bagel", "link": "https://maps.google.com/?q=STAND1-1+Okayama" },
+                { "time": "08:40", "title": "前往 Budget 租車", "desc": "走路前往岡山駅前西口店。", "highlight": true, "transport": "Walk", "icon": "fa-car-side", "type": "car-rental" },
+                { "time": "09:00", "title": "租車出發", "desc": "開車經瀨戶大橋前往四國。", "transport": "Drive", "icon": "fa-road", "type": "transport" },
+                { "time": "09:40", "title": "鷲羽山展望台", "desc": "眺望瀨戶大橋的壯麗景色。", "transport": "Drive", "icon": "fa-mountain-sun", "type": "landmark", "mapQuery": "Washuzan+Observatory", "link": "https://maps.google.com/?q=Washuzan+Observatory" },
+                { "time": "10:40", "title": "金刀比羅宮", "desc": "挑戰 785 階石階。", "highlight": true, "transport": "Drive", "icon": "fa-stairs", "type": "shrine", "mapQuery": "Kotohira-gu", "link": "https://maps.google.com/?q=Kotohira-gu" },
+                { "time": "15:10", "title": "四國水族館", "desc": "主題水族館，必看海豚秀。", "transport": "Drive", "icon": "fa-fish", "type": "attraction", "mapQuery": "Shikoku+Aquarium", "link": "https://maps.google.com/?q=Shikoku+Aquarium" },
+                { "time": "18:20", "title": "返回岡山", "desc": "經瀨戶大橋，市區晚餐。", "transport": "Drive", "icon": "fa-road", "type": "transport" }
             ],
-            day4: [
-                { time: "08:30", title: "還車", desc: "Budget 岡山駅前西口店。", highlight: true, transport: "Walk", icon: "fa-car-burst", type: "car-rental" },
-                { time: "AM", title: "自由活動", desc: "整理行李 / 購買伴手禮。", transport: "Walk", icon: "fa-gifts", type: "shopping" },
-                { time: "12:00", title: "前往機場", desc: "搭乘接駁巴士。", transport: "Bus", icon: "fa-bus-simple", type: "transport" },
-                { time: "15:25", title: "虎航 IT215", desc: "飛往台北。", highlight: true, transport: "Plane", icon: "fa-plane-departure", type: "airport" }
+            "day4": [
+                { "time": "08:30", "title": "還車", "desc": "Budget 岡山駅前西口店。", "highlight": true, "transport": "Walk", "icon": "fa-car-burst", "type": "car-rental" },
+                { "time": "AM", "title": "自由活動", "desc": "整理行李 / 購買伴手禮。", "transport": "Walk", "icon": "fa-gifts", "type": "shopping" },
+                { "time": "12:00", "title": "前往機場", "desc": "搭乘接駁巴士。", "transport": "Bus", "icon": "fa-bus-simple", "type": "transport" },
+                { "time": "15:25", "title": "虎航 IT215", "desc": "飛往台北。", "highlight": true, "transport": "Plane", "icon": "fa-plane-departure", "type": "airport" }
             ]
         };
 
-        // --- GEMINI API HELPERS ---
-        // (保持不變)
+        // 全域變數，用於儲存從 JSON 檔案載入的行程資料
+        let itinerary = null;
+        let currentDayKey = 'day1'; // 追蹤當前顯示的日期
+        let isEditMode = false; // 追蹤行程總覽編輯模式狀態
+        let isGuideEditMode = false; // 新增：追蹤導覽編輯模式狀態
+
+        // --- GEMINI API HELPERS (未更動) ---
         /**
          * 處理 Gemini API 呼叫，支援指數退避。
          * @param {object} payload - API 請求的內容
@@ -461,6 +492,9 @@
          * @param {number} index - guideData 陣列的索引
          */
         async function getDeepDiveGuide(index) {
+            if (!itinerary) return; // 確保資料已載入
+            if(isGuideEditMode) return; // 編輯模式下不觸發 AI 導覽
+
             const guideList = generateGuideList();
             const item = guideList[index];
             const landmark = item.title;
@@ -515,17 +549,56 @@
                 setTimeout(() => {
                     document.getElementById('splash-screen').style.display = 'none';
                 }, 500);
-            }, 2000);
+            }, 500); 
             
-            // 渲染初始頁面內容
-            renderDay('day1');
-            renderGuide();
+            // 開始載入資料並初始化應用程式
+            loadItineraryData();
             loadWallet();
             loadChecklist();
             loadMemo();
         };
 
+        function loadItineraryData() {
+            // 優先從 localStorage 載入儲存的行程
+            const savedItinerary = localStorage.getItem('saved_itinerary');
+            if (savedItinerary) {
+                try {
+                    itinerary = JSON.parse(savedItinerary);
+                } catch (e) {
+                    console.error("Error parsing saved itinerary, loading default:", e);
+                    itinerary = defaultItinerary;
+                }
+            } else {
+                // 如果沒有儲存的行程，使用預設值
+                itinerary = defaultItinerary;
+            }
+            
+            initializeApp();
+        }
+
+        function saveItineraryData() {
+            localStorage.setItem('saved_itinerary', JSON.stringify(itinerary));
+            // 使用自訂 UI 替代 alert
+            showToast('行程已儲存！', 'success');
+        }
+
+        function initializeApp() {
+            // 渲染初始頁面內容 (默認為 Day 1)
+            renderDay('day1');
+            // 渲染導覽頁面
+            renderGuide();
+        }
+
         function switchTab(pageId) {
+            // 如果從 Plan 切換走，且處於編輯模式，先嘗試儲存
+            if(isEditMode && pageId !== 'page-plan') {
+                toggleEditMode(); // 退出行程編輯模式並儲存
+            }
+            // 如果從 Guide 切換走，且處於編輯模式，先嘗試儲存
+            if(isGuideEditMode && pageId !== 'page-guide') {
+                toggleGuideEditMode(); // 退出導覽編輯模式並儲存
+            }
+
             document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
             document.getElementById(pageId).classList.add('active');
             
@@ -538,9 +611,95 @@
             
             window.scrollTo(0, 0);
         }
+        
+        // --- PLAN EDIT MODE LOGIC ---
+        
+        function toggleEditMode() {
+            // 確保退出 Guide 編輯模式 (防止同時編輯)
+            if (isGuideEditMode) { toggleGuideEditMode(); } 
 
-        // --- PLAN LOGIC ---
+            // 如果要退出編輯模式，先收集並儲存變更
+            if (isEditMode) {
+                saveItemChanges();
+                saveItineraryData();
+                isEditMode = false;
+                document.getElementById('edit-toggle-btn').innerHTML = `<i class="fa-solid fa-pen-to-square mr-1"></i> 編輯行程`;
+                document.getElementById('edit-toggle-btn').classList.remove('bg-jp-green');
+                document.getElementById('edit-toggle-btn').classList.add('bg-jp-red');
+            } else {
+                isEditMode = true;
+                document.getElementById('edit-toggle-btn').innerHTML = `<i class="fa-solid fa-check mr-1"></i> 儲存變更`;
+                document.getElementById('edit-toggle-btn').classList.remove('bg-jp-red');
+                document.getElementById('edit-toggle-btn').classList.add('bg-jp-green');
+            }
+            // 重新渲染當前日期
+            renderDay(currentDayKey);
+        }
+
+        function saveItemChanges() {
+            const dayItems = itinerary[currentDayKey];
+            const updatedItems = [];
+
+            // 遍歷所有行程項目容器並收集更新後的數據
+            const itemContainers = document.querySelectorAll('.itinerary-item');
+            itemContainers.forEach((container, index) => {
+                const updatedItem = {
+                    ...dayItems[index], // 保留所有未顯示的屬性 (如 mapQuery, link, type)
+                    time: container.querySelector('.edit-time')?.value || dayItems[index].time || '',
+                    title: container.querySelector('.edit-title')?.value || dayItems[index].title || '',
+                    desc: container.querySelector('.edit-desc')?.value || dayItems[index].desc || '',
+                    transport: container.querySelector('.edit-transport')?.value || dayItems[index].transport || '',
+                };
+                // 如果標題被修改，同步更新 mapQuery
+                if (updatedItem.title !== dayItems[index].title) {
+                    updatedItem.mapQuery = updatedItem.title;
+                }
+                updatedItems.push(updatedItem);
+            });
+
+            // 更新行程物件
+            itinerary[currentDayKey] = updatedItems;
+            
+            // 重新載入導覽頁面 (以防景點名稱被修改)
+            renderGuide();
+        }
+
+        function deleteItineraryItem(dayKey, itemIndex) {
+            // 使用自訂 UI 替代 confirm
+            if(!window.confirm("確定刪除此行程項目？")) return;
+            
+            itinerary[dayKey].splice(itemIndex, 1);
+            saveItineraryData();
+            renderDay(dayKey);
+            renderGuide(); // 更新導覽頁面
+        }
+
+        function addNewItineraryItem(dayKey) {
+            const newItem = {
+                time: "HH:MM",
+                title: "新行程",
+                desc: "請編輯內容",
+                transport: "Walk",
+                icon: "fa-map-pin",
+                type: "custom"
+            };
+            itinerary[dayKey].push(newItem);
+            renderDay(dayKey); // 重新渲染以顯示新項目
+            // 新增項目後，保持在編輯模式
+            if (!isEditMode) {
+                toggleEditMode(); 
+            }
+        }
+
+        // --- PLAN RENDER LOGIC ---
         function switchDay(day) {
+            // 如果從一個日期切換到另一個日期，先儲存前一個日期的變更
+            if (isEditMode && currentDayKey && currentDayKey !== day) {
+                saveItemChanges();
+                saveItineraryData();
+            }
+
+            currentDayKey = day; // 更新當前日期
             document.querySelectorAll('.day-tab').forEach(b => {
                 b.classList.remove('bg-jp-dark', 'text-white');
                 b.classList.add('bg-white', 'text-jp-gray');
@@ -560,6 +719,7 @@
                 case 'Tram':
                     return 'text-blue-500';
                 case 'JR Train':
+                case 'Train':
                     return 'text-green-600';
                 case 'Drive':
                     return 'text-red-500';
@@ -573,86 +733,189 @@
         }
 
         function renderDay(dayKey) {
+            if (!itinerary) return; // 確保資料已載入
+
             const container = document.getElementById('day-content');
             const items = itinerary[dayKey];
             let html = '<div class="relative border-l-2 border-gray-200 ml-3 space-y-6 pb-6">';
             
-            items.forEach(item => {
-                const colorClass = item.highlight ? 'text-jp-red' : 'text-gray-500';
-                const dotClass = item.highlight ? 'bg-jp-red border-red-200' : 'bg-gray-300 border-white';
-                const bgClass = item.highlight ? 'bg-red-50' : 'bg-white';
-                
-                let linkBtn = '';
-                if(item.link) {
-                    linkBtn = `<a href="${item.link}" target="_blank" class="absolute right-4 top-4 text-gray-300 hover:text-jp-dark"><i class="fa-solid fa-location-arrow"></i></a>`;
-                }
-
-                // UPDATED: Include transport method and icon
-                const transportColor = getTransportColor(item.transport);
-                const transportHtml = item.transport ? 
-                    `<div class="text-xs font-bold flex items-center gap-1 ${transportColor}"><i class="fa-solid ${item.icon}"></i> ${item.transport}</div>` : 
-                    `<div class="text-xs font-bold text-gray-400 flex items-center gap-1"><i class="fa-solid ${item.icon}"></i> -</div>`;
-
-
+            if (!items || items.length === 0) {
                 html += `
-                <div class="ml-6 relative">
-                    <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full border-2 ${dotClass}"></div>
-                    <div class="${bgClass} rounded-xl p-4 shadow-sm pr-10 relative">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-xs font-bold ${colorClass}">${item.time}</span>
-                            ${transportHtml}
-                        </div>
-                        <h3 class="font-bold text-jp-dark text-lg">${item.title}</h3>
-                        <p class="text-sm text-gray-600 mt-1">${item.desc}</p>
-                        ${linkBtn}
+                    <div class="text-center text-jp-gray p-8">
+                        <i class="fa-solid fa-circle-xmark mr-2"></i> 該日行程尚未安排！
                     </div>
-                </div>`;
-            });
+                `;
+            } else {
+                items.forEach((item, index) => {
+                    const colorClass = item.highlight ? 'text-jp-red' : 'text-gray-500';
+                    const dotClass = item.highlight ? 'bg-jp-red border-red-200' : 'bg-gray-300 border-white';
+                    const bgClass = item.highlight ? 'bg-red-50' : 'bg-white';
+                    
+                    let linkBtn = '';
+                    if(item.link || item.mapQuery) {
+                        const mapLink = item.link || `https://maps.google.com/?q=${item.mapQuery}`;
+                        linkBtn = `<a href="${mapLink}" target="_blank" class="absolute right-4 top-4 text-gray-300 hover:text-jp-dark"><i class="fa-solid fa-location-arrow"></i></a>`;
+                    }
+
+                    const transportColor = getTransportColor(item.transport);
+                    const transportHtml = item.transport ? 
+                        `<div class="text-xs font-bold flex items-center gap-1 ${transportColor}"><i class="fa-solid ${item.icon || 'fa-info-circle'}"></i> ${item.transport}</div>` : 
+                        `<div class="text-xs font-bold text-gray-400 flex items-center gap-1"><i class="fa-solid ${item.icon || 'fa-info-circle'}"></i> -</div>`;
+                    
+                    if (isEditMode) {
+                        // 編輯模式
+                        html += `
+                        <div class="ml-6 relative itinerary-item">
+                            <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full border-2 ${dotClass}"></div>
+                            <div class="${bgClass} rounded-xl p-4 shadow-md pr-10 relative border-2 border-jp-green/50">
+                                <div class="flex items-start justify-between mb-2">
+                                    <input type="text" value="${item.time}" class="edit-time w-1/4 editable-input font-mono text-sm font-bold ${colorClass}">
+                                    <input type="text" value="${item.transport || ''}" placeholder="交通" class="edit-transport w-1/4 editable-input text-xs text-right ${transportColor}">
+                                </div>
+                                <input type="text" value="${item.title}" placeholder="行程標題" class="edit-title w-full editable-input font-bold text-lg mb-2">
+                                <textarea placeholder="行程描述" class="edit-desc w-full editable-input text-gray-600 text-sm h-16 resize-none">${item.desc}</textarea>
+                                
+                                <div class="absolute top-0 right-0 p-2">
+                                    <button onclick="deleteItineraryItem('${dayKey}', ${index})" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash-can"></i></button>
+                                </div>
+                            </div>
+                        </div>`;
+                    } else {
+                        // 檢視模式
+                        html += `
+                        <div class="ml-6 relative itinerary-item">
+                            <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full border-2 ${dotClass}"></div>
+                            <div class="${bgClass} rounded-xl p-4 shadow-sm pr-10 relative">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs font-bold ${colorClass}">${item.time}</span>
+                                    ${transportHtml}
+                                </div>
+                                <h3 class="font-bold text-jp-dark text-lg">${item.title}</h3>
+                                <p class="text-sm text-gray-600 mt-1">${item.desc}</p>
+                                ${linkBtn}
+                            </div>
+                        </div>`;
+                    }
+                });
+            }
+
             html += '</div>';
+
+            if (isEditMode) {
+                html += `
+                    <button onclick="addNewItineraryItem('${dayKey}')" class="w-full bg-jp-accent text-jp-dark py-3 rounded-xl font-bold shadow-md mt-6 active:scale-95 transition hover:bg-jp-accent/80 border border-dashed border-jp-dark/30">
+                        <i class="fa-solid fa-plus mr-1"></i> 新增行程項目
+                    </button>
+                `;
+            }
+
             container.innerHTML = html;
         }
 
-        // --- GUIDE LOGIC (UPDATED: Generate comprehensive guide list) ---
+        // --- GUIDE EDIT MODE LOGIC ---
+        
+        function toggleGuideEditMode() {
+            // 確保退出 Plan 編輯模式 (防止同時編輯)
+            if (isEditMode) { toggleEditMode(); } 
+
+            if (isGuideEditMode) {
+                saveGuideChanges();
+                isGuideEditMode = false;
+                document.getElementById('guide-edit-toggle-btn').innerHTML = `<i class="fa-solid fa-pen-to-square mr-1"></i> 編輯導覽`;
+                document.getElementById('guide-edit-toggle-btn').classList.remove('bg-jp-green');
+                document.getElementById('guide-edit-toggle-btn').classList.add('bg-jp-red');
+            } else {
+                isGuideEditMode = true;
+                document.getElementById('guide-edit-toggle-btn').innerHTML = `<i class="fa-solid fa-check mr-1"></i> 儲存變更`;
+                document.getElementById('guide-edit-toggle-btn').classList.remove('bg-jp-red');
+                document.getElementById('guide-edit-toggle-btn').classList.add('bg-jp-green');
+            }
+            // 重新渲染導覽頁面
+            renderGuide();
+        }
+
+        function saveGuideChanges() {
+            const guideCards = document.querySelectorAll('.guide-card');
+
+            guideCards.forEach(card => {
+                const originalTitle = card.dataset.originalTitle;
+                const newTitle = card.querySelector('.edit-guide-title').value;
+                const newDesc = card.querySelector('.edit-guide-desc').value;
+
+                if (!originalTitle) return; // 忽略無效卡片
+
+                // 遍歷整個行程物件，更新所有匹配的項目
+                Object.keys(itinerary).forEach(dayKey => {
+                    itinerary[dayKey] = itinerary[dayKey].map(item => {
+                        // 使用原始標題進行匹配
+                        if (item.title === originalTitle) {
+                            item.title = newTitle;
+                            item.desc = newDesc;
+                            // 同步更新 mapQuery，確保地圖連結正確
+                            item.mapQuery = newTitle;
+                        }
+                        return item;
+                    });
+                });
+            });
+
+            // 更新完行程物件後，儲存到 localStorage
+            saveItineraryData();
+            // 重新渲染 Itinerary 頁面 (避免在切換時資料不一致)
+            renderDay(currentDayKey); 
+        }
+
+        // --- GUIDE RENDER LOGIC ---
         
         /**
          * 從行程中提取所有獨特的景點、美食和重要地點
+         * @returns {Array<Object>} 包含獨特地點資訊和第一次出現日期的列表
          */
         function generateGuideList() {
+            if (!itinerary) return []; // 確保資料已載入
+
             const uniqueItems = {};
-            Object.values(itinerary).flat().forEach(item => {
-                // 只納入有 title 且不是純粹的 'transport' 行程點 (但機場/還車等重要點納入)
-                if (item.title && 
-                    !['transport', 'start'].includes(item.type) && 
-                    !uniqueItems[item.title]) {
+            Object.entries(itinerary).forEach(([dayKey, dayItems]) => {
+                dayItems.forEach(item => {
+                    // 只納入有 title 且不是純粹的 'transport' 行程點
+                    if (item.title && 
+                        !['transport', 'start'].includes(item.type)) {
 
-                    let tags = [];
-                    switch (item.type) {
-                        case 'airport': tags = ["交通樞紐", "出入境"]; break;
-                        case 'hotel': tags = ["住宿", "Check-in"]; break;
-                        case 'landmark': tags = ["必訪", "觀光"]; break;
-                        case 'food': tags = ["美食", "餐廳"]; break;
-                        case 'shopping': tags = ["購物", "百貨"]; break;
-                        case 'shrine': tags = ["文化", "神社"]; break;
-                        case 'attraction': tags = ["遊樂", "活動"]; break;
-                        case 'car-rental': tags = ["服務", "租車"]; break;
-                        default: tags = [item.type || '探索'];
+                        if (!uniqueItems[item.title]) {
+                            // 第一次出現，記錄所有信息，並記下是哪一天
+                            let tags = [];
+                            switch (item.type) {
+                                case 'airport': tags = ["交通樞紐", "出入境"]; break;
+                                case 'hotel': tags = ["住宿", "Check-in"]; break;
+                                case 'landmark': tags = ["必訪", "觀光"]; break;
+                                case 'food': tags = ["美食", "餐廳"]; break;
+                                case 'shopping': tags = ["購物", "百貨"]; break;
+                                case 'shrine': tags = ["文化", "神社"]; break;
+                                case 'attraction': tags = ["遊樂", "活動"]; break;
+                                case 'car-rental': tags = ["服務", "租車"]; break;
+                                default: tags = [item.type || '探索'];
+                            }
+
+                            uniqueItems[item.title] = {
+                                title: item.title,
+                                subtitle: item.desc ? item.desc.split('，')[0] : (item.type === 'food' ? '餐廳美食' : item.type === 'landmark' ? '景點' : '地點'),
+                                desc: item.desc || "點擊深入導覽以獲取更多資訊。",
+                                mapQuery: item.mapQuery || item.title,
+                                tags: tags,
+                                type: item.type,
+                                link: item.link,
+                                firstDay: dayKey // 記錄第一次出現的日期
+                            };
+                        }
                     }
-
-                    uniqueItems[item.title] = {
-                        title: item.title,
-                        subtitle: item.desc ? item.desc.split('，')[0] : (item.type === 'food' ? '餐廳美食' : item.type === 'landmark' ? '景點' : '地點'),
-                        desc: item.desc || "點擊深入導覽以獲取更多資訊。",
-                        mapQuery: item.mapQuery || item.title,
-                        tags: tags,
-                        type: item.type,
-                        link: item.link
-                    };
-                }
+                });
             });
             return Object.values(uniqueItems);
         }
 
         function renderGuide() {
+            if (!itinerary) return; // 確保資料已載入
+
             const container = document.getElementById('guide-container');
             const guideList = generateGuideList();
             
@@ -665,8 +928,43 @@
                 
                 let tagsHtml = item.tags.map(t => `<span class="text-[10px] bg-gray-100 px-2 py-1 rounded text-gray-500">#${t}</span>`).join('');
 
+                let contentHtml = '';
+                let buttonHtml = '';
+                
+                if (isGuideEditMode) {
+                    // 編輯模式下的內容
+                    contentHtml = `
+                        <input type="text" value="${item.title}" placeholder="景點名稱" class="edit-guide-title w-full editable-input font-bold text-xl mb-3 border-2 border-jp-dark/30">
+                        <p class="text-xs font-bold text-jp-dark mb-1">描述 (會同步更新到行程)</p>
+                        <textarea placeholder="景點描述" class="edit-guide-desc w-full editable-input text-gray-600 text-sm h-16 resize-none leading-relaxed">${item.desc}</textarea>
+                    `;
+                    buttonHtml = `
+                        <button disabled class="w-full text-center bg-gray-300 text-gray-600 py-2 rounded-lg text-sm font-bold opacity-50 cursor-not-allowed">
+                            儲存中請勿操作
+                        </button>
+                    `;
+                } else {
+                    // 檢視模式下的內容
+                    contentHtml = `
+                        <h3 class="font-bold text-jp-dark text-lg mb-2">${item.title}</h3>
+                        <p class="text-gray-600 text-sm leading-relaxed mb-4 text-justify">
+                            ${item.desc}
+                        </p>
+                    `;
+                    buttonHtml = `
+                        <div class="grid grid-cols-2 gap-3 mt-4">
+                            <a href="https://maps.google.com/?q=${item.mapQuery}" target="_blank" class="block w-full text-center bg-jp-dark text-white py-2 rounded-lg text-sm font-bold shadow-md active:scale-95 transition">
+                                <i class="fa-solid fa-location-dot mr-1"></i> 開始導航
+                            </a>
+                            <button id="guide-btn-${index}" onclick="getDeepDiveGuide(${index})" class="block w-full text-center bg-jp-accent text-jp-dark py-2 rounded-lg text-sm font-bold shadow-md active:scale-95 transition hover:bg-jp-red/20">
+                                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> 深入導覽 (AI)
+                            </button>
+                        </div>
+                    `;
+                }
+
                 const html = `
-                <div class="bg-white rounded-2xl overflow-hidden shadow-soft mb-6">
+                <div class="bg-white rounded-2xl overflow-hidden shadow-soft mb-6 guide-card" data-original-title="${item.title}">
                     <div class="h-40 bg-gray-200 relative overflow-hidden group">
                         <!-- 地圖 Iframe -->
                         <iframe width="100%" height="100%" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="${mapEmbed}" style="filter: grayscale(20%); opacity: 0.8;"></iframe>
@@ -677,19 +975,9 @@
                     </div>
                     <div class="p-5">
                         <div class="flex gap-2 mb-3">${tagsHtml}</div>
-                        <p class="text-gray-600 text-sm leading-relaxed mb-4 text-justify">
-                            ${item.desc}
-                        </p>
-                        
-                        <div class="grid grid-cols-2 gap-3 mt-4">
-                            <a href="https://maps.google.com/?q=${item.mapQuery}" target="_blank" class="block w-full text-center bg-jp-dark text-white py-2 rounded-lg text-sm font-bold shadow-md active:scale-95 transition">
-                                <i class="fa-solid fa-location-dot mr-1"></i> 開始導航
-                            </a>
-                            <button id="guide-btn-${index}" onclick="getDeepDiveGuide(${index})" class="block w-full text-center bg-jp-accent text-jp-dark py-2 rounded-lg text-sm font-bold shadow-md active:scale-95 transition hover:bg-jp-red/20">
-                                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> 深入導覽 (AI)
-                            </button>
-                        </div>
-                        
+                        ${contentHtml}
+                        ${buttonHtml}
+
                         <!-- Gemini AI Response Container -->
                         <div id="guide-response-${index}" class="mt-4 p-3 bg-jp-bg rounded-xl border border-jp-gray/20 hidden">
                             <!-- AI 內容將會注入此處 -->
@@ -702,7 +990,7 @@
         }
 
 
-        // --- WALLET LOGIC (Unchanged) ---
+        // --- WALLET LOGIC (未更動) ---
         function updateRate() {
             const rate = document.getElementById('exchange-rate').value;
             localStorage.setItem('trip_rate', rate);
@@ -771,7 +1059,7 @@
             const amount = document.getElementById('expense-amount').value;
             const type = document.getElementById('expense-type').value;
             
-            if(!item || !amount) { /* 使用自訂 UI 替代 alert */ console.log('請輸入項目與金額'); return; }
+            if(!item || !amount) { showToast('請輸入項目與金額', 'error'); return; }
             
             const expense = {
                 id: Date.now(),
@@ -854,7 +1142,7 @@
             document.getElementById('total-twd').innerText = Math.round(totalJPY * rate).toLocaleString();
         }
 
-        // --- LISTS LOGIC (Unchanged) ---
+        // --- LISTS LOGIC (未更動) ---
         const defaultChecklist = [
             "護照", "網卡 (eSim/實體)", "日幣現金", "信用卡 (海外回饋)", 
             "充電線 / 行動電源", "個人藥品", "牙刷牙膏", "換洗衣物",
@@ -960,6 +1248,40 @@
             } else {
                 container.innerHTML = '';
             }
+        }
+        
+        // --- Custom Toast/Notification (取代 alert/confirm) ---
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            let bgColor = '';
+            let icon = '';
+            
+            switch(type) {
+                case 'success':
+                    bgColor = 'bg-jp-green';
+                    icon = '<i class="fa-solid fa-check-circle"></i>';
+                    break;
+                case 'error':
+                    bgColor = 'bg-jp-red';
+                    icon = '<i class="fa-solid fa-xmark-circle"></i>';
+                    break;
+                case 'info':
+                default:
+                    bgColor = 'bg-jp-dark';
+                    icon = '<i class="fa-solid fa-info-circle"></i>';
+            }
+
+            toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 p-3 ${bgColor} text-white rounded-xl shadow-lg text-sm transition-opacity duration-300 z-50 flex items-center gap-2`;
+            toast.innerHTML = `${icon} <span>${message}</span>`;
+            
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
         }
     </script>
 </body>
